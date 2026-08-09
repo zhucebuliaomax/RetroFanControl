@@ -56,10 +56,7 @@
     <string name="notification_channel_name">Fan control</string>
     <string name="notification_channel_description">Shows the active curve, fan percentage, and CPU/GPU temperatures</string>
     <string name="notification_content">%1$s · %2$d%% · CPU %3$s · GPU %4$s</string>
-    <string name="profile_switch_notification_channel_name">Profile switches</string>
-    <string name="profile_switch_notification_channel_description">Shows the controls activated for the foreground app</string>
-    <string name="profile_switch_notification_title">Switched to %1$s profile</string>
-    <string name="profile_switch_notification_content">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="profile_switch_toast_message">Switched to %1$s profile</string>
     <string name="profile_control_off">Off</string>
 
     <string name="tile_fan_label">Fan curve</string>

@@ -33,7 +33,11 @@ object KernelFanThermalController {
      * frequency throttling, CPU hotplug, thermal pause, and thermal-zone modes remain enabled.
      */
     @Synchronized
-    fun apply(prefs: SharedPreferences, disableUsbFanControl: Boolean): Boolean {
+    fun apply(
+        prefs: SharedPreferences,
+        disableUsbFanControl: Boolean,
+        disableThermalProtection: Boolean,
+    ): Boolean {
         val trips = discoverFanTrips()
         if (trips.isEmpty()) {
             Log.w(TAG, "No CPU/GPU/USB pwm-fan thermal trips found")
@@ -50,9 +54,18 @@ object KernelFanThermalController {
         }
         originalEditor.commit()
 
-        // Recover zones disabled by older builds; individual pwm-fan trips are controlled below.
-        trips.map { it.zonePath }.distinct().forEach { zonePath ->
-            Shell.cmd("echo enabled > $zonePath/mode 2>/dev/null").exec()
+        trips.groupBy { it.zonePath }.forEach { (zonePath, zoneTrips) ->
+            val kind = zoneTrips.first().kind
+            val mode = if (
+                disableThermalProtection && kind in setOf(ThermalKind.CPU, ThermalKind.GPU)
+            ) {
+                "disabled"
+            } else {
+                "enabled"
+            }
+            if (!Shell.cmd("echo $mode > $zonePath/mode 2>/dev/null").exec().isSuccess) {
+                Log.w(TAG, "Unable to set ${zoneTrips.first().zoneType} mode to $mode")
+            }
         }
 
         var success = true
@@ -71,7 +84,8 @@ object KernelFanThermalController {
         }
         Log.i(
             TAG,
-            "Applied pwm-fan thermal policy: CPU/GPU disabled, USB disabled=$disableUsbFanControl",
+            "Applied thermal policy: CPU/GPU fan disabled, USB fan disabled=" +
+                "$disableUsbFanControl, protection disabled=$disableThermalProtection",
         )
         return success
     }

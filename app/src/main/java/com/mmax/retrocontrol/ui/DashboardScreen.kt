@@ -144,7 +144,7 @@ private data class PendingExportFile(
 fun DashboardScreen(
     vm: DashboardViewModel = viewModel(),
     startOnAccess: Boolean = false,
-    onFanCurveSelected: (Boolean) -> Unit = {},
+    onProfileSwitchToastsEnabled: (Boolean) -> Unit = {},
     onRefreshRoot: () -> Unit = {},
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -250,7 +250,7 @@ fun DashboardScreen(
     }
     val addPresetFocusRequester = remember { FocusRequester() }
     val appFocusRequester = remember { FocusRequester() }
-    val authorizationFocusRequesters = remember { List(9) { FocusRequester() } }
+    val authorizationFocusRequesters = remember { List(10) { FocusRequester() } }
     val githubFocusRequester = remember { FocusRequester() }
     val navigationFocusRequesters = remember {
         List(DashboardDestination.entries.size) { FocusRequester() }
@@ -652,7 +652,6 @@ fun DashboardScreen(
                 },
                 onDefaultProfileSelected = { isGame, id ->
                     vm.selectDefaultProfile(isGame, id)
-                    onFanCurveSelected(true)
                 },
                 onProfileEdit = { editingPresetId = it },
                 onAddProfile = {
@@ -810,7 +809,6 @@ fun DashboardScreen(
                 onProfileSelected = { vm.setAppPreset(packageName, it) },
                 onFanCurveSelected = {
                     vm.setAppFanCurve(packageName, it)
-                    if (it != null) onFanCurveSelected(true)
                 },
                 onJoystickSelected = { vm.setAppJoystickProfile(packageName, it) },
                 onButtonLayoutSelected = { vm.setAppButtonLayout(packageName, it) },
@@ -848,9 +846,9 @@ fun DashboardScreen(
                 state = AuthorizationUiState(
                     telemetryOverlayEnabled = state.overlayEnabled,
                     autoStartEnabled = state.autoStartEnabled,
-                    profileSwitchNotificationsEnabled =
-                        state.profileSwitchNotificationsEnabled,
+                    profileSwitchToastsEnabled = state.profileSwitchToastsEnabled,
                     usbThermalDisabled = state.usbThermalDisabled,
+                    thermalProtectionDisabled = state.thermalProtectionDisabled,
                     rootGranted = hasRoot,
                     overlayPermissionGranted = overlayPermissionGranted,
                     notificationsEnabled = notificationsEnabled,
@@ -874,9 +872,12 @@ fun DashboardScreen(
                     }
                 },
                 onAutoStartEnabledChange = vm::setAutoStartEnabled,
-                onProfileSwitchNotificationsEnabledChange =
-                    vm::setProfileSwitchNotificationsEnabled,
+                onProfileSwitchToastsEnabledChange = { enabled ->
+                    vm.setProfileSwitchToastsEnabled(enabled)
+                    onProfileSwitchToastsEnabled(enabled)
+                },
                 onUsbThermalDisabledChange = vm::setUsbThermalDisabled,
+                onThermalProtectionDisabledChange = vm::setThermalProtectionDisabled,
                 onRefreshRoot = onRefreshRoot,
                 onOpenKernelSu = { context.openKernelSu() },
                 onOpenAppInfo = { context.openAppInfo() },
@@ -930,7 +931,7 @@ fun DashboardScreen(
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
-                profileSwitchNotificationsModifier = Modifier
+                profileSwitchToastsModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[6])
                     .focusProperties {
                         up = authorizationFocusRequesters[5]
@@ -950,6 +951,14 @@ fun DashboardScreen(
                     .focusRequester(authorizationFocusRequesters[8])
                     .focusProperties {
                         up = authorizationFocusRequesters[7]
+                        down = authorizationFocusRequesters[9]
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                thermalProtectionModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[9])
+                    .focusProperties {
+                        up = authorizationFocusRequesters[8]
                         down = githubFocusRequester
                         left = FocusRequester.Default
                         right = FocusRequester.Default
@@ -961,7 +970,7 @@ fun DashboardScreen(
                 linkModifier = Modifier
                     .focusRequester(githubFocusRequester)
                     .focusProperties {
-                        up = authorizationFocusRequesters[8]
+                        up = authorizationFocusRequesters[9]
                         down = FocusRequester.Default
                         left = FocusRequester.Default
                         right = FocusRequester.Default
@@ -1088,7 +1097,6 @@ fun DashboardScreen(
             },
             onFanCurveSelected = {
                 vm.setPresetFanCurve(preset.id, it)
-                if (it != null) onFanCurveSelected(true)
             },
             onFanCurveEdit = { editingProfileId = it },
             onAddFanCurve = {

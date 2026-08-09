@@ -1,10 +1,8 @@
 package com.mmax.retrocontrol.tile
 
-import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -12,8 +10,6 @@ import android.view.Gravity
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.edit
 import androidx.core.graphics.drawable.toDrawable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -63,16 +59,9 @@ import com.mmax.retrocontrol.hardware.CpuFrequencyController
 import com.mmax.retrocontrol.service.MediaProjectionActivity
 import com.mmax.retrocontrol.service.SystemControlService
 import com.mmax.retrocontrol.theme.RetroControlTheme
-import androidx.core.content.ContextCompat
 
 /** Routes Quick Settings long presses and renders the matching chooser as a dialog window. */
 class FanCurveTilePreferencesActivity : ComponentActivity() {
-    private val notificationPermission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) {
-        finish()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         @Suppress("DEPRECATION")
@@ -355,9 +344,7 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
         PerformanceQuickSettingsTile.requestRefresh(this)
         RootAccessManager.ensureRoot {
             SystemControlService.startOrUpdate(applicationContext)
-            if (!requestNotificationPermissionIfNeeded()) {
-                finish()
-            }
+            finish()
         }
     }
 
@@ -369,9 +356,7 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
         ButtonLayoutQuickSettingsTile.requestRefresh(this)
         RootAccessManager.ensureRoot {
             SystemControlService.startOrUpdate(applicationContext)
-            if (!requestNotificationPermissionIfNeeded()) {
-                finish()
-            }
+            finish()
         }
     }
 
@@ -381,10 +366,8 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
             SystemControlService.startOrUpdate(applicationContext)
             if (requiresAmbilightCapture) {
                 startActivity(MediaProjectionActivity.createIntent(this))
-                finish()
-            } else if (!requestNotificationPermissionIfNeeded()) {
-                finish()
             }
+            finish()
         }
     }
 
@@ -392,24 +375,8 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
         FanQuickSettingsTile.requestRefresh(this)
         RootAccessManager.ensureRoot {
             SystemControlService.startOrUpdate(applicationContext)
-            if (!requestNotificationPermissionIfNeeded()) {
-                finish()
-            }
+            finish()
         }
-    }
-
-    private fun requestNotificationPermissionIfNeeded(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false
-        if (
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
-        ) return false
-
-        val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
-        if (prefs.getBoolean(Prefs.NOTIFICATION_PERMISSION_REQUESTED, false)) return false
-        prefs.edit { putBoolean(Prefs.NOTIFICATION_PERMISSION_REQUESTED, true) }
-        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-        return true
     }
 }
 

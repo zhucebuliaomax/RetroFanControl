@@ -51,10 +51,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -116,12 +118,31 @@ fun Modifier.bringIntoViewOnFocus(): Modifier {
 fun SettingsSectionTitle(
     text: String,
     modifier: Modifier = Modifier,
+    color: Color? = null,
 ) {
     Text(
         text = text,
         modifier = modifier.padding(start = SettingsTokens.sectionTitleInset),
-        color = MaterialTheme.colorScheme.primary,
+        color = color ?: MaterialTheme.colorScheme.primary,
         style = MaterialTheme.typography.titleSmallEmphasized,
+    )
+}
+
+@Composable
+fun SettingsStandaloneFooterText(
+    text: AnnotatedString,
+    modifier: Modifier = Modifier,
+    color: Color? = null,
+) {
+    Text(
+        text = text,
+        modifier = modifier.padding(
+            start = SettingsTokens.sectionTitleInset,
+            end = SettingsTokens.sectionTitleInset,
+            top = 8.dp,
+        ),
+        color = color ?: MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall,
     )
 }
 
@@ -170,6 +191,7 @@ fun SecondaryMenuListItem(
     keepInteractionShape: Boolean = false,
     colors: ListItemColors? = null,
     trailingContent: (@Composable () -> Unit)? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
     supportingContent: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
@@ -181,6 +203,7 @@ fun SecondaryMenuListItem(
         shapes = shapes,
         colors = colors ?: ListItemDefaults.segmentedColors(),
         trailingContent = trailingContent,
+        leadingContent = leadingContent,
         supportingContent = supportingContent,
         content = content,
         modifier = modifier
@@ -298,7 +321,11 @@ fun SettingsSegmentScope.SettingsPreferenceRow(
     trailingIcon: ImageVector? = null,
     trailingIconContentDescription: String? = null,
     trailingContent: (@Composable () -> Unit)? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
+    containerColor: Color? = null,
+    contentColor: Color? = null,
 ) {
+    val resolvedContentColor = contentColor ?: MaterialTheme.colorScheme.onSurface
     SegmentedListItem(
         onClick = onClick,
         modifier = modifier
@@ -309,29 +336,30 @@ fun SettingsSegmentScope.SettingsPreferenceRow(
             count = count,
         ),
         colors = ListItemDefaults.segmentedColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            containerColor = containerColor ?: MaterialTheme.colorScheme.surfaceContainerHighest,
         ),
         trailingContent = trailingContent ?: trailingIcon?.let { icon ->
             {
                 androidx.compose.material3.Icon(
                     imageVector = icon,
                     contentDescription = trailingIconContentDescription,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = contentColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
+        leadingContent = leadingContent,
         supportingContent = summary?.let { supportingText ->
             {
                 Text(
                     text = supportingText,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = contentColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
         content = {
             Text(
                 text = title,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = resolvedContentColor,
                 style = MaterialTheme.typography.bodyLargeEmphasized,
             )
         },

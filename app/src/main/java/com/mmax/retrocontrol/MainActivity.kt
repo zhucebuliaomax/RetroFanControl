@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
             RetroControlTheme {
                 DashboardScreen(
                     startOnAccess = startOnAccess,
-                    onFanCurveSelected = ::onFanCurveSelected,
+                    onProfileSwitchToastsEnabled = ::onProfileSwitchToastsEnabled,
                     onRefreshRoot = { requestRoot(forceRefresh = true) },
                 )
                 if (showRootNotice) {
@@ -84,16 +84,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun onFanCurveSelected(enabled: Boolean) {
+    private fun onProfileSwitchToastsEnabled(enabled: Boolean) {
         if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         if (
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
         ) return
 
-        val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
-        if (prefs.getBoolean(Prefs.NOTIFICATION_PERMISSION_REQUESTED, false)) return
-        prefs.edit { putBoolean(Prefs.NOTIFICATION_PERMISSION_REQUESTED, true) }
         notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 }

@@ -7,8 +7,8 @@
     <string name="authorization_auto_start">Start at boot</string>
     <string name="authorization_auto_start_enabled">Enabled; hardware profiles can resume after restart</string>
     <string name="authorization_auto_start_disabled">Disabled; the app will not start automatically after restart</string>
-    <string name="authorization_profile_switch_notifications">Notify when switching profiles</string>
-    <string name="authorization_profile_switch_notifications_summary">Show a notification when opening games or apps with custom profiles.</string>
+    <string name="authorization_profile_switch_toasts">Show profile switch toast</string>
+    <string name="authorization_profile_switch_toasts_summary">Show a system toast when opening games or apps with custom profiles.</string>
     <string name="authorization_root">Root access</string>
     <string name="authorization_root_granted">Root access granted</string>
     <string name="authorization_root_not_granted">Root access not granted, tap to refresh</string>
@@ -23,7 +23,11 @@
     <string name="authorization_notifications_enabled">Enabled</string>
     <string name="authorization_notifications_disabled">Disabled</string>
     <string name="authorization_disable_usb_thermal">Disable USB thermal fan control</string>
-    <string name="authorization_disable_usb_thermal_summary">Keep the current fan curve when USB temperature reaches the kernel fan threshold</string>
+    <string name="authorization_caution">Caution</string>
+    <string name="authorization_disable_usb_thermal_footer">The default USB thermal policy is extremely aggressive: at 43°C, it immediately drives the fan to roughly half speed; at 45°C, it runs the fan close to its highest automatic level. As a result, the fan may race while the device is charging. A teardown of the RP6 shows that the fan provides almost no airflow over the USB port, so this behavior is of questionable benefit. This option disables USB thermal fan control. Use at your own risk.</string>
+    <string name="authorization_dangerous">Dangerous</string>
+    <string name="authorization_disable_thermal_protection">Disable thermal protection</string>
+    <string name="authorization_disable_thermal_protection_footer">Disabling thermal protection stops CPU/GPU thermal throttling and emergency safeguards. Extreme heat may permanently damage the device. Use at your own risk.</string>
     <string name="authorization_microphone">Microphone</string>
     <string name="authorization_microphone_granted">Access granted for Music Reactive</string>
     <string name="authorization_microphone_not_granted">Required by Music Reactive</string>

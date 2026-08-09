@@ -7,8 +7,8 @@
     <string name="authorization_auto_start">起動時に開始</string>
     <string name="authorization_auto_start_enabled">有効、再起動後にハードウェアプロファイルを自動的に再開できます</string>
     <string name="authorization_auto_start_disabled">無効、再起動後にアプリを自動起動しません</string>
-    <string name="authorization_profile_switch_notifications">プロファイル切替時に通知</string>
-    <string name="authorization_profile_switch_notifications_summary">ゲームまたはカスタムプロファイルを使用するアプリを開いたときに通知します。</string>
+    <string name="authorization_profile_switch_toasts">プロファイル切替時にトーストを表示</string>
+    <string name="authorization_profile_switch_toasts_summary">ゲームまたはカスタムプロファイルを使用するアプリを開いたときにシステムトーストを表示します。</string>
     <string name="authorization_root">Root 権限</string>
     <string name="authorization_root_granted">Root 権限を取得済み</string>
     <string name="authorization_root_not_granted">Root 権限がありません、タップして更新</string>
@@ -23,7 +23,11 @@
     <string name="authorization_notifications_enabled">有効</string>
     <string name="authorization_notifications_disabled">無効</string>
     <string name="authorization_disable_usb_thermal">USB 温度によるファン制御を無効化</string>
-    <string name="authorization_disable_usb_thermal_summary">USB 温度がカーネルのしきい値に達しても現在のファンカーブを維持します</string>
+    <string name="authorization_caution">注意</string>
+    <string name="authorization_disable_usb_thermal_footer">標準の USB 温度制御は非常に積極的です。43°C に達するとファンが直ちに約半速で回転し、45°C ではカーネル自動制御の最高レベル近くまで上がるため、充電中にファンが激しく回転することがあります。RP6 を分解して確認すると、ファンから USB ポートへ届く気流はほとんどなく、この動作の実用的な効果には疑問があります。このオプションは USB 温度によるファン制御を無効にします。自己責任で使用してください。</string>
+    <string name="authorization_dangerous">危険</string>
+    <string name="authorization_disable_thermal_protection">温度保護を無効化</string>
+    <string name="authorization_disable_thermal_protection_footer">温度保護を無効にすると、CPU/GPU のサーマルスロットリングと緊急保護が停止します。過度な高温によりデバイスが恒久的に損傷する可能性があります。自己責任で使用してください。</string>
     <string name="authorization_microphone">マイク</string>
     <string name="authorization_microphone_granted">音楽連動用に許可済み</string>
     <string name="authorization_microphone_not_granted">音楽連動に必要です</string>

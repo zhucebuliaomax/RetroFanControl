@@ -37,10 +37,10 @@ object Prefs {
     const val OVERLAY_Y = "overlay_y"
     const val OVERLAY_DISPLAY_MODE = "overlay_display_mode"
     const val AUTO_START_ENABLED = "auto_start_enabled"
-    const val PROFILE_SWITCH_NOTIFICATIONS_ENABLED =
+    const val PROFILE_SWITCH_TOASTS_ENABLED =
         "profile_switch_notifications_enabled"
     const val USB_THERMAL_DISABLED = "usb_thermal_disabled"
-    const val NOTIFICATION_PERMISSION_REQUESTED = "notification_permission_requested"
+    const val THERMAL_PROTECTION_DISABLED = "thermal_protection_disabled"
     const val ROOT_NOTICE_ACKNOWLEDGED = "root_notice_acknowledged"
     const val FIRST_LAUNCH_ACCESS_SHOWN = "first_launch_access_shown"
 }

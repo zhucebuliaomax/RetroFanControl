@@ -15,6 +15,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
@@ -79,12 +80,7 @@ class SystemControlService : Service() {
     companion object {
         private const val TAG = "SystemControlService"
         const val CHANNEL_ID = "fan_control"
-        private const val PROFILE_SWITCH_CHANNEL_ID = "profile_switches"
         private const val NOTIFICATION_ID = 1
-        private const val PROFILE_SWITCH_NOTIFICATION_ID = 2
-        // LineageOS 23.2 keeps a heads-up banner visible for 5 seconds. Keep the promoted
-        // notification alive for another 5 seconds so its status-bar chip can be seen.
-        private const val PROFILE_SWITCH_NOTIFICATION_DURATION_MS = 10_000L
         const val ACTION_UPDATE = "com.mmax.retrocontrol.UPDATE"
         const val ACTION_SET_PROJECTION_INTENT =
             "com.mmax.retrocontrol.SET_PROJECTION_INTENT"
@@ -145,7 +141,7 @@ class SystemControlService : Service() {
     private var screenOffJob: Job? = null
     private var performanceJob: Job? = null
     private var buttonLayoutJob: Job? = null
-    private var profileSwitchNotificationJob: Job? = null
+    private var profileSwitchToast: Toast? = null
     private val overlayAdjustmentMutex = Mutex()
     private var overlay: TelemetryOverlay? = null
     private lateinit var joystickEffects: JoystickEffectEngine
@@ -234,7 +230,8 @@ class SystemControlService : Service() {
                 loadFanPreferences()
                 FanQuickSettingsTile.requestRefresh(applicationContext)
             }
-            Prefs.USB_THERMAL_DISABLED -> applyUsbThermalPreference()
+            Prefs.USB_THERMAL_DISABLED,
+            Prefs.THERMAL_PROTECTION_DISABLED -> applyKernelThermalPreferences()
             Prefs.BUTTON_LAYOUT_PROFILE_CATALOG -> {
                 applyButtonLayout(force = true)
                 ButtonLayoutQuickSettingsTile.requestRefresh(applicationContext)
@@ -295,7 +292,7 @@ class SystemControlService : Service() {
         applyPerformanceProfile(force = true)
         startForegroundAppMonitor()
         startFanLoop()
-        applyUsbThermalPreference()
+        applyKernelThermalPreferences()
         applyOverlayState()
         FanQuickSettingsTile.requestRefresh(applicationContext)
         JoystickQuickSettingsTile.requestRefresh(applicationContext)
@@ -359,7 +356,8 @@ class SystemControlService : Service() {
         fanJob?.cancel()
         performanceJob?.cancel()
         buttonLayoutJob?.cancel()
-        cancelProfileSwitchNotification()
+        profileSwitchToast?.cancel()
+        profileSwitchToast = null
         overlay?.hide()
         overlay = null
         joystickEffects.destroy()
@@ -398,12 +396,14 @@ class SystemControlService : Service() {
         overlayEnabled = prefs.getBoolean(Prefs.OVERLAY_ENABLED, false)
     }
 
-    private fun applyUsbThermalPreference() {
-        val disabled = prefs.getBoolean(Prefs.USB_THERMAL_DISABLED, false)
+    private fun applyKernelThermalPreferences() {
+        val usbDisabled = prefs.getBoolean(Prefs.USB_THERMAL_DISABLED, false)
+        val protectionDisabled = prefs.getBoolean(Prefs.THERMAL_PROTECTION_DISABLED, false)
         scope.launch {
             KernelFanThermalController.apply(
                 prefs = prefs,
-                disableUsbFanControl = disabled,
+                disableUsbFanControl = usbDisabled,
+                disableThermalProtection = protectionDisabled,
             )
         }
     }
@@ -544,7 +544,7 @@ class SystemControlService : Service() {
                     loadJoystickPreferences()
                     applyButtonLayout()
                     applyPerformanceProfile()
-                    showProfileSwitchNotification(foreground)
+                    showProfileSwitchToast(foreground)
                     Log.i(
                         TAG,
                         "Foreground changed: package=$foreground, " +
@@ -893,22 +893,11 @@ class SystemControlService : Service() {
                 setShowBadge(false)
             }
         )
-        notificationManager.createNotificationChannel(
-            NotificationChannel(
-                PROFILE_SWITCH_CHANNEL_ID,
-                getString(R.string.profile_switch_notification_channel_name),
-                NotificationManager.IMPORTANCE_HIGH,
-            ).apply {
-                description = getString(R.string.profile_switch_notification_channel_description)
-                setShowBadge(false)
-            }
-        )
     }
 
-    private fun showProfileSwitchNotification(packageName: String?) {
-        cancelProfileSwitchNotification()
+    private fun showProfileSwitchToast(packageName: String?) {
         if (packageName.isNullOrBlank()) return
-        if (!prefs.getBoolean(Prefs.PROFILE_SWITCH_NOTIFICATIONS_ENABLED, true)) return
+        if (!prefs.getBoolean(Prefs.PROFILE_SWITCH_TOASTS_ENABLED, false)) return
 
         val fanCatalog = FanCurvePreferences.load(prefs).catalog
         val joystickCatalog = JoystickProfilePreferences.load(prefs)
@@ -960,68 +949,18 @@ class SystemControlService : Service() {
             return
         }
 
-        val fanName = fanConfig.activeProfile?.displayName(this)
-            ?: getString(R.string.fan_mode_off)
-        val joystickName = joystickProfile?.name ?: getString(R.string.profile_control_off)
-        val buttonLayoutName = ButtonLayoutProfilePreferences.resolveEffectiveProfile(
-            prefs,
-            packageName,
-            appIsGame,
-        )?.name ?: getString(R.string.button_layout_unmanaged)
-        val performanceTargetId = PerformanceTilePreferences.selectedProfileId(
-            prefs,
-            performanceConfig,
-        ) ?: PerformanceProfileResolver.resolveTargetProfileId(
-            profileConfig = performanceConfig,
-            presetConfig = presetConfig,
-            appProfile = appProfile,
-            appIsGame = appIsGame,
-        )
-        val performanceName = (
-            performanceConfig.profile(performanceTargetId) ?: performanceConfig.stockProfile
-        )?.displayName(this) ?: getString(R.string.performance_unmanaged)
-        val content = getString(
-            R.string.profile_switch_notification_content,
-            fanName,
-            joystickName,
-            buttonLayoutName,
-            performanceName,
-        )
         val appName = runCatching {
             val info = packageManager.getApplicationInfo(packageName, 0)
             packageManager.getApplicationLabel(info).toString()
         }.getOrDefault(packageName)
-        val openApp = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        val notification = NotificationCompat.Builder(this, PROFILE_SWITCH_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_tile_fan)
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setContentTitle(getString(R.string.profile_switch_notification_title, appName))
-            .setContentText(content)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
-            .setContentIntent(openApp)
-            .setOngoing(true)
-            .setRequestPromotedOngoing(true)
-            .setShortCriticalText(appName)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .build()
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.notify(PROFILE_SWITCH_NOTIFICATION_ID, notification)
-        profileSwitchNotificationJob = scope.launch {
-            delay(PROFILE_SWITCH_NOTIFICATION_DURATION_MS)
-            notificationManager.cancel(PROFILE_SWITCH_NOTIFICATION_ID)
+        scope.launch(Dispatchers.Main) {
+            profileSwitchToast?.cancel()
+            profileSwitchToast = Toast.makeText(
+                applicationContext,
+                getString(R.string.profile_switch_toast_message, appName),
+                Toast.LENGTH_SHORT,
+            ).also(Toast::show)
         }
-    }
-
-    private fun cancelProfileSwitchNotification() {
-        profileSwitchNotificationJob?.cancel()
-        profileSwitchNotificationJob = null
-        getSystemService(NotificationManager::class.java)
-            .cancel(PROFILE_SWITCH_NOTIFICATION_ID)
     }
 
     private fun buildNotification(): Notification {

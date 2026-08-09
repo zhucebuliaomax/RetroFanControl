@@ -7,8 +7,8 @@
     <string name="authorization_auto_start">开机启动</string>
     <string name="authorization_auto_start_enabled">已开启，重启后可自动恢复硬件方案</string>
     <string name="authorization_auto_start_disabled">已关闭，重启后不会自动启动</string>
-    <string name="authorization_profile_switch_notifications">切换配置时通知</string>
-    <string name="authorization_profile_switch_notifications_summary">打开游戏或使用自定义配置的应用时显示通知。</string>
+    <string name="authorization_profile_switch_toasts">切换配置时显示 Toast</string>
+    <string name="authorization_profile_switch_toasts_summary">打开游戏或使用自定义配置的应用时显示系统 Toast。</string>
     <string name="authorization_root">Root 权限</string>
     <string name="authorization_root_granted">已获取 Root 权限</string>
     <string name="authorization_root_not_granted">未获取 Root 权限，点击刷新</string>
@@ -23,7 +23,11 @@
     <string name="authorization_notifications_enabled">已开启</string>
     <string name="authorization_notifications_disabled">已关闭</string>
     <string name="authorization_disable_usb_thermal">关闭 USB 温控</string>
-    <string name="authorization_disable_usb_thermal_summary">USB 温度达到内核风扇阈值时仍按当前风扇曲线运行</string>
+    <string name="authorization_caution">注意</string>
+    <string name="authorization_disable_usb_thermal_footer">默认的 USB 温控策略非常激进：达到 43°C 时会立即让风扇以约半速运转，达到 45°C 时则会接近内核自动控制的最高档，因此设备充电时风扇可能狂转。拆解 RP6 后可以发现，风扇几乎无法为 USB 接口提供有效气流，所以这种策略的实际收益存疑。此选项可以关闭 USB 温控风扇控制，请自行承担风险。</string>
+    <string name="authorization_dangerous">危险</string>
+    <string name="authorization_disable_thermal_protection">关闭温控保护</string>
+    <string name="authorization_disable_thermal_protection_footer">关闭温控保护会停止 CPU/GPU 过热降频和紧急保护。极端高温可能永久损坏设备，请自行承担风险。</string>
     <string name="authorization_microphone">麦克风</string>
     <string name="authorization_microphone_granted">已授权，可用于音乐律动</string>
     <string name="authorization_microphone_not_granted">音乐律动需要此权限</string>

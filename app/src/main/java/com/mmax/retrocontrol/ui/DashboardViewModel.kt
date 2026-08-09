@@ -65,8 +65,9 @@ data class DashboardState(
     ),
     val overlayEnabled: Boolean = false,
     val autoStartEnabled: Boolean = true,
-    val profileSwitchNotificationsEnabled: Boolean = true,
+    val profileSwitchToastsEnabled: Boolean = false,
     val usbThermalDisabled: Boolean = false,
+    val thermalProtectionDisabled: Boolean = false,
     val installedApps: List<InstalledAppInfo> = emptyList(),
     val appProfiles: Map<String, AppControlProfile> = emptyMap(),
     val telemetry: TelemetrySnapshot = TelemetrySnapshot(),
@@ -169,11 +170,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 ),
                 overlayEnabled = prefs.getBoolean(Prefs.OVERLAY_ENABLED, false),
                 autoStartEnabled = prefs.getBoolean(Prefs.AUTO_START_ENABLED, true),
-                profileSwitchNotificationsEnabled = prefs.getBoolean(
-                    Prefs.PROFILE_SWITCH_NOTIFICATIONS_ENABLED,
-                    true,
+                profileSwitchToastsEnabled = prefs.getBoolean(
+                    Prefs.PROFILE_SWITCH_TOASTS_ENABLED,
+                    false,
                 ),
                 usbThermalDisabled = prefs.getBoolean(Prefs.USB_THERMAL_DISABLED, false),
+                thermalProtectionDisabled = prefs.getBoolean(
+                    Prefs.THERMAL_PROTECTION_DISABLED,
+                    false,
+                ),
             )
         }
     }
@@ -714,14 +719,20 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         mutableState.update { it.copy(autoStartEnabled = enabled) }
     }
 
-    fun setProfileSwitchNotificationsEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(Prefs.PROFILE_SWITCH_NOTIFICATIONS_ENABLED, enabled) }
-        mutableState.update { it.copy(profileSwitchNotificationsEnabled = enabled) }
+    fun setProfileSwitchToastsEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(Prefs.PROFILE_SWITCH_TOASTS_ENABLED, enabled) }
+        mutableState.update { it.copy(profileSwitchToastsEnabled = enabled) }
     }
 
     fun setUsbThermalDisabled(disabled: Boolean) {
         prefs.edit { putBoolean(Prefs.USB_THERMAL_DISABLED, disabled) }
         mutableState.update { it.copy(usbThermalDisabled = disabled) }
+        SystemControlService.startOrUpdate(getApplication())
+    }
+
+    fun setThermalProtectionDisabled(disabled: Boolean) {
+        prefs.edit { putBoolean(Prefs.THERMAL_PROTECTION_DISABLED, disabled) }
+        mutableState.update { it.copy(thermalProtectionDisabled = disabled) }
         SystemControlService.startOrUpdate(getApplication())
     }
 
