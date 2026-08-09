@@ -19,6 +19,7 @@ data class AuthorizationUiState(
     val telemetryOverlayEnabled: Boolean,
     val autoStartEnabled: Boolean,
     val profileSwitchNotificationsEnabled: Boolean,
+    val usbThermalDisabled: Boolean,
     val rootGranted: Boolean,
     val overlayPermissionGranted: Boolean,
     val notificationsEnabled: Boolean,
@@ -35,6 +36,7 @@ fun AuthorizationManagementSection(
     onTelemetryOverlayEnabledChange: (Boolean) -> Unit,
     onAutoStartEnabledChange: (Boolean) -> Unit,
     onProfileSwitchNotificationsEnabledChange: (Boolean) -> Unit,
+    onUsbThermalDisabledChange: (Boolean) -> Unit,
     onRefreshRoot: () -> Unit,
     onOpenKernelSu: () -> Unit,
     onOpenAppInfo: () -> Unit,
@@ -49,6 +51,7 @@ fun AuthorizationManagementSection(
     appInfoModifier: Modifier = Modifier,
     overlayModifier: Modifier = Modifier,
     notificationsModifier: Modifier = Modifier,
+    usbThermalModifier: Modifier = Modifier,
 ) {
     SettingsSegmentGroup(modifier) {
         SettingsPreferenceRow(
@@ -179,6 +182,24 @@ fun AuthorizationManagementSection(
             onClick = onOpenNotificationSettings,
             modifier = notificationsModifier,
             trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+        )
+    }
+    Spacer(Modifier.height(20.dp))
+    SettingsSegmentGroup {
+        SettingsPreferenceRow(
+            index = 0,
+            count = 1,
+            title = stringResource(R.string.authorization_disable_usb_thermal),
+            summary = stringResource(R.string.authorization_disable_usb_thermal_summary),
+            onClick = { onUsbThermalDisabledChange(!state.usbThermalDisabled) },
+            modifier = usbThermalModifier,
+            trailingContent = {
+                Switch(
+                    checked = state.usbThermalDisabled,
+                    onCheckedChange = onUsbThermalDisabledChange,
+                    modifier = Modifier.focusProperties { canFocus = false },
+                )
+            },
         )
     }
 }

@@ -250,7 +250,7 @@ fun DashboardScreen(
     }
     val addPresetFocusRequester = remember { FocusRequester() }
     val appFocusRequester = remember { FocusRequester() }
-    val authorizationFocusRequesters = remember { List(8) { FocusRequester() } }
+    val authorizationFocusRequesters = remember { List(9) { FocusRequester() } }
     val githubFocusRequester = remember { FocusRequester() }
     val navigationFocusRequesters = remember {
         List(DashboardDestination.entries.size) { FocusRequester() }
@@ -850,6 +850,7 @@ fun DashboardScreen(
                     autoStartEnabled = state.autoStartEnabled,
                     profileSwitchNotificationsEnabled =
                         state.profileSwitchNotificationsEnabled,
+                    usbThermalDisabled = state.usbThermalDisabled,
                     rootGranted = hasRoot,
                     overlayPermissionGranted = overlayPermissionGranted,
                     notificationsEnabled = notificationsEnabled,
@@ -875,6 +876,7 @@ fun DashboardScreen(
                 onAutoStartEnabledChange = vm::setAutoStartEnabled,
                 onProfileSwitchNotificationsEnabledChange =
                     vm::setProfileSwitchNotificationsEnabled,
+                onUsbThermalDisabledChange = vm::setUsbThermalDisabled,
                 onRefreshRoot = onRefreshRoot,
                 onOpenKernelSu = { context.openKernelSu() },
                 onOpenAppInfo = { context.openAppInfo() },
@@ -940,6 +942,14 @@ fun DashboardScreen(
                     .focusRequester(authorizationFocusRequesters[7])
                     .focusProperties {
                         up = authorizationFocusRequesters[6]
+                        down = authorizationFocusRequesters[8]
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                usbThermalModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[8])
+                    .focusProperties {
+                        up = authorizationFocusRequesters[7]
                         down = githubFocusRequester
                         left = FocusRequester.Default
                         right = FocusRequester.Default
@@ -951,7 +961,7 @@ fun DashboardScreen(
                 linkModifier = Modifier
                     .focusRequester(githubFocusRequester)
                     .focusProperties {
-                        up = authorizationFocusRequesters[7]
+                        up = authorizationFocusRequesters[8]
                         down = FocusRequester.Default
                         left = FocusRequester.Default
                         right = FocusRequester.Default

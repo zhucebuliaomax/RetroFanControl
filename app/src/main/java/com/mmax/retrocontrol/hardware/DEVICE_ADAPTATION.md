@@ -12,7 +12,15 @@ For every zone, the reader loads:
 `ThermalClassifier` recognizes CPU, GPU, DDR/DRAM and battery names
 case-insensitively. Examples include `cpu-1-0`, `cpuss-0`, `mtktscpu`,
 `gpuss-0`, `gpu-thermal`, `ddr`, `dram-thermal` and `battery-thermal`.
-Unrelated zones such as USB, modem and PMIC sensors are ignored.
+USB thermal zones are exposed as display-only telemetry. Other unrelated zones,
+such as modem and PMIC sensors, are ignored.
+
+`KernelFanThermalController` changes only trip points whose `cdev*` binding
+resolves to `pwm-fan`. CPU/GPU fan trips are suppressed by default, while the
+USB fan trips follow the Settings switch. It does not disable thermal-zone
+`mode`, so GPU devfreq throttling, CPU hotplug, thermal pause, and unrelated USB
+protection stay active. Original pwm-fan trip temperatures are saved before the
+first change so enabled policies can be restored.
 
 This is intentionally semantic classification rather than selecting the
 highest temperature from every thermal zone. An unrelated charging or PMIC

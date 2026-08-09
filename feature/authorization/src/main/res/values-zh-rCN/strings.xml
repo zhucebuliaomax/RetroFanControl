@@ -22,6 +22,8 @@
     <string name="authorization_notifications">通知设置</string>
     <string name="authorization_notifications_enabled">已开启</string>
     <string name="authorization_notifications_disabled">已关闭</string>
+    <string name="authorization_disable_usb_thermal">关闭 USB 温控</string>
+    <string name="authorization_disable_usb_thermal_summary">USB 温度达到内核风扇阈值时仍按当前风扇曲线运行</string>
     <string name="authorization_microphone">麦克风</string>
     <string name="authorization_microphone_granted">已授权，可用于音乐律动</string>
     <string name="authorization_microphone_not_granted">音乐律动需要此权限</string>

@@ -77,6 +77,7 @@
     <string name="gpu">GPU</string>
     <string name="ddr_short">DDR</string>
     <string name="battery_short">BAT</string>
+    <string name="usb_therm">USB 温度</string>
     <string name="fan_speed">ファン</string>
     <string name="decrease_fan_speed">ファン速度を 5% 下げる</string>
     <string name="increase_fan_speed">ファン速度を 5% 上げる</string>

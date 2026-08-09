@@ -2,7 +2,7 @@ package com.mmax.retrocontrol.hardware
 
 import java.io.File
 
-enum class ThermalKind { CPU, GPU, DDR, BATTERY }
+enum class ThermalKind { CPU, GPU, DDR, BATTERY, USB }
 
 data class ThermalReading(
     val zone: String,
@@ -25,6 +25,7 @@ data class ThermalSnapshot(
     val gpu: List<ThermalReading> = readings.filter { it.kind == ThermalKind.GPU }
     val ddr: ThermalReading? = readings.firstOrNull { it.kind == ThermalKind.DDR }
     val battery: ThermalReading? = readings.firstOrNull { it.kind == ThermalKind.BATTERY }
+    val usb: ThermalReading? = readings.firstOrNull { it.kind == ThermalKind.USB }
 
     val cpuSummary: TemperatureSummary = summarize(cpu)
     val gpuSummary: TemperatureSummary = summarize(gpu)
@@ -51,7 +52,7 @@ data class ThermalSnapshot(
 }
 
 /**
- * Dynamically discovers only CPU, GPU, DDR and battery thermal zones.
+ * Dynamically discovers only CPU, GPU, DDR, battery and USB thermal zones.
  * Zone indices are deliberately never hardcoded.
  */
 object ThermalSensorReader {

@@ -45,6 +45,7 @@ import com.mmax.retrocontrol.hardware.GamepadController
 import com.mmax.retrocontrol.hardware.TelemetryRepository
 import com.mmax.retrocontrol.hardware.ThermalSensorReader
 import com.mmax.retrocontrol.hardware.ThermalSnapshot
+import com.mmax.retrocontrol.hardware.KernelFanThermalController
 import com.mmax.retrocontrol.overlay.TelemetryOverlay
 import com.mmax.retrocontrol.tile.FanQuickSettingsTile
 import com.mmax.retrocontrol.tile.OverlayTileService
@@ -233,6 +234,7 @@ class SystemControlService : Service() {
                 loadFanPreferences()
                 FanQuickSettingsTile.requestRefresh(applicationContext)
             }
+            Prefs.USB_THERMAL_DISABLED -> applyUsbThermalPreference()
             Prefs.BUTTON_LAYOUT_PROFILE_CATALOG -> {
                 applyButtonLayout(force = true)
                 ButtonLayoutQuickSettingsTile.requestRefresh(applicationContext)
@@ -293,6 +295,7 @@ class SystemControlService : Service() {
         applyPerformanceProfile(force = true)
         startForegroundAppMonitor()
         startFanLoop()
+        applyUsbThermalPreference()
         applyOverlayState()
         FanQuickSettingsTile.requestRefresh(applicationContext)
         JoystickQuickSettingsTile.requestRefresh(applicationContext)
@@ -393,6 +396,16 @@ class SystemControlService : Service() {
 
     private fun loadOverlayPreference() {
         overlayEnabled = prefs.getBoolean(Prefs.OVERLAY_ENABLED, false)
+    }
+
+    private fun applyUsbThermalPreference() {
+        val disabled = prefs.getBoolean(Prefs.USB_THERMAL_DISABLED, false)
+        scope.launch {
+            KernelFanThermalController.apply(
+                prefs = prefs,
+                disableUsbFanControl = disabled,
+            )
+        }
     }
 
     private fun applyButtonLayout(force: Boolean = false) {

@@ -66,6 +66,7 @@ data class DashboardState(
     val overlayEnabled: Boolean = false,
     val autoStartEnabled: Boolean = true,
     val profileSwitchNotificationsEnabled: Boolean = true,
+    val usbThermalDisabled: Boolean = false,
     val installedApps: List<InstalledAppInfo> = emptyList(),
     val appProfiles: Map<String, AppControlProfile> = emptyMap(),
     val telemetry: TelemetrySnapshot = TelemetrySnapshot(),
@@ -172,6 +173,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     Prefs.PROFILE_SWITCH_NOTIFICATIONS_ENABLED,
                     true,
                 ),
+                usbThermalDisabled = prefs.getBoolean(Prefs.USB_THERMAL_DISABLED, false),
             )
         }
     }
@@ -715,6 +717,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun setProfileSwitchNotificationsEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(Prefs.PROFILE_SWITCH_NOTIFICATIONS_ENABLED, enabled) }
         mutableState.update { it.copy(profileSwitchNotificationsEnabled = enabled) }
+    }
+
+    fun setUsbThermalDisabled(disabled: Boolean) {
+        prefs.edit { putBoolean(Prefs.USB_THERMAL_DISABLED, disabled) }
+        mutableState.update { it.copy(usbThermalDisabled = disabled) }
+        SystemControlService.startOrUpdate(getApplication())
     }
 
     private fun joystickProfileIds(): Set<String> =

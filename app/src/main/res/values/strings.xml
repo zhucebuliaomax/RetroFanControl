@@ -75,6 +75,7 @@
     <string name="gpu">GPU</string>
     <string name="ddr_short">DDR</string>
     <string name="battery_short">BAT</string>
+    <string name="usb_therm">USB Therm</string>
     <string name="fan_speed">Fan</string>
     <string name="decrease_fan_speed">Decrease fan speed by 5 percent</string>
     <string name="increase_fan_speed">Increase fan speed by 5 percent</string>

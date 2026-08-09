@@ -75,6 +75,7 @@
     <string name="gpu">GPU</string>
     <string name="ddr_short">DDR</string>
     <string name="battery_short">电池</string>
+    <string name="usb_therm">USB 温度</string>
     <string name="fan_speed">风扇</string>
     <string name="decrease_fan_speed">风扇转速降低 5%</string>
     <string name="increase_fan_speed">风扇转速提高 5%</string>

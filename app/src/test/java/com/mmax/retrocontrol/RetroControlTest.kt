@@ -318,7 +318,7 @@ class RetroControlTest {
         assertEquals(ThermalKind.DDR, ThermalSensorReader.classify("dram-thermal"))
         assertEquals(ThermalKind.BATTERY, ThermalSensorReader.classify("battery"))
         assertEquals(ThermalKind.BATTERY, ThermalSensorReader.classify("battery-thermal"))
-        assertNull(ThermalSensorReader.classify("usb-therm"))
+        assertEquals(ThermalKind.USB, ThermalSensorReader.classify("usb-therm"))
         assertNull(ThermalSensorReader.classify("vbat"))
         assertNull(ThermalSensorReader.classify("pm8550_tz"))
     }

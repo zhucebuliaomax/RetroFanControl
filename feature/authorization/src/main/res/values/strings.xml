@@ -22,6 +22,8 @@
     <string name="authorization_notifications">Notification settings</string>
     <string name="authorization_notifications_enabled">Enabled</string>
     <string name="authorization_notifications_disabled">Disabled</string>
+    <string name="authorization_disable_usb_thermal">Disable USB thermal fan control</string>
+    <string name="authorization_disable_usb_thermal_summary">Keep the current fan curve when USB temperature reaches the kernel fan threshold</string>
     <string name="authorization_microphone">Microphone</string>
     <string name="authorization_microphone_granted">Access granted for Music Reactive</string>
     <string name="authorization_microphone_not_granted">Required by Music Reactive</string>

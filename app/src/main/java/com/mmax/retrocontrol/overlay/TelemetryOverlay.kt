@@ -223,23 +223,20 @@ private fun OverlayContent(
                 OverlayTemperatureGroup(stringResource(R.string.cpu), thermal.cpuSummary)
                 OverlayTemperatureGroup(stringResource(R.string.gpu), thermal.gpuSummary)
                 Spacer(Modifier.height(1.dp))
-                OverlayDualMetricGroup(
-                    firstTitle = stringResource(R.string.ddr_short),
-                    firstValue = thermal.ddr?.let { formatTemperature(it.tempC) }
-                        ?: stringResource(R.string.not_available),
-                    secondTitle = stringResource(R.string.battery_short),
-                    secondValue = thermal.battery?.let { formatTemperature(it.tempC) }
-                        ?: stringResource(R.string.not_available),
+                OverlayThermalMetricsGroup(
+                    metrics = listOf(
+                        stringResource(R.string.ddr_short) to thermal.ddr
+                            ?.let { formatTemperature(it.tempC) },
+                        stringResource(R.string.battery_short) to thermal.battery
+                            ?.let { formatTemperature(it.tempC) },
+                        stringResource(R.string.usb_therm) to thermal.usb
+                            ?.let { formatTemperature(it.tempC) },
+                    ),
                 )
-                overlayCoreGroups.forEach { group ->
-                    OverlayFrequencyGroup(
-                        title = stringResource(group.labelRes),
-                        frequencyKhz = averageFrequency(
-                            telemetry.frequency.currentFrequenciesKhz,
-                            group.cpuIds,
-                        ),
-                    )
-                }
+                OverlayFrequencyGroup(
+                    groups = overlayCoreGroups,
+                    currentFrequenciesKhz = telemetry.frequency.currentFrequenciesKhz,
+                )
             }
             if (displayMode == OverlayDisplayMode.DATA_FAN_CURVE) {
                 Spacer(Modifier.height(4.dp))
@@ -531,47 +528,57 @@ private fun OverlayTemperatureGroup(
 }
 
 @Composable
-private fun OverlayDualMetricGroup(
-    firstTitle: String,
-    firstValue: String,
-    secondTitle: String,
-    secondValue: String,
+private fun OverlayThermalMetricsGroup(
+    metrics: List<Pair<String, String?>>,
 ) {
-    Row(
+    val unavailable = stringResource(R.string.not_available)
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color(0x1AFFFFFF), RoundedCornerShape(7.dp))
             .padding(horizontal = 7.dp, vertical = 5.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalAlignment = Alignment.Start,
     ) {
-        OverlayCompactMetric(firstTitle, firstValue)
-        OverlayCompactMetric(secondTitle, secondValue)
+        metrics.forEach { (title, value) ->
+            OverlayCompactMetric(title, value ?: unavailable)
+        }
     }
 }
 
 @Composable
-private fun OverlayFrequencyGroup(title: String, frequencyKhz: Int?) {
+private fun OverlayFrequencyGroup(
+    groups: List<OverlayCoreGroup>,
+    currentFrequenciesKhz: Map<Int, Int>,
+) {
     val unavailable = stringResource(R.string.not_available)
-    Text(
-        text = buildAnnotatedString {
-            withStyle(SpanStyle(color = Color(0xFFFFB000), fontWeight = FontWeight.Bold)) {
-                append("$title: ")
-            }
-            withStyle(SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)) {
-                append(
-                    frequencyKhz?.let(::formatOverlayFrequency)
-                        ?: unavailable
-                )
-            }
-        },
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color(0x1AFFFFFF), RoundedCornerShape(7.dp))
             .padding(horizontal = 7.dp, vertical = 5.dp),
-        fontSize = 9.5.sp,
-        lineHeight = 11.sp,
-        maxLines = 1,
-    )
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        groups.forEach { group ->
+            val title = stringResource(group.labelRes)
+            val frequencyKhz = averageFrequency(currentFrequenciesKhz, group.cpuIds)
+            Text(
+                text = buildAnnotatedString {
+                    withStyle(
+                        SpanStyle(color = Color(0xFFFFB000), fontWeight = FontWeight.Bold)
+                    ) {
+                        append("$title: ")
+                    }
+                    withStyle(SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)) {
+                        append(frequencyKhz?.let(::formatOverlayFrequency) ?: unavailable)
+                    }
+                },
+                fontSize = 9.5.sp,
+                lineHeight = 11.sp,
+                maxLines = 1,
+            )
+        }
+    }
 }
 
 @Composable
