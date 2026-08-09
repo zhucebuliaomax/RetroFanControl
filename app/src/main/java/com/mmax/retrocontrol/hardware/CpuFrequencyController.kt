@@ -84,6 +84,24 @@ object CpuFrequencyController {
         }.toMap()
     }
 
+    fun readCurrentFrequencies(cpuIds: Collection<Int>): Map<Int, Int> {
+        val ids = cpuIds.filter { it >= 0 }.distinct().sorted()
+        if (ids.isEmpty()) return emptyMap()
+        val command = ids.joinToString("; ") { cpuId ->
+            "value=\$(cat /sys/devices/system/cpu/cpu$cpuId/cpufreq/scaling_cur_freq " +
+                "2>/dev/null); printf '$cpuId=%s\\n' \"\$value\""
+        }
+        val result = Shell.cmd(command).exec()
+        if (!result.isSuccess) return emptyMap()
+        return result.out.mapNotNull { line ->
+            val cpuId = line.substringBefore('=').trim().toIntOrNull()
+                ?: return@mapNotNull null
+            val frequency = line.substringAfter('=', "").trim().toIntOrNull()
+                ?: return@mapNotNull null
+            cpuId to frequency
+        }.toMap()
+    }
+
     internal fun parsePolicyLines(lines: List<String>): List<CpuFrequencyPolicy> {
         return lines.mapNotNull { rawLine ->
             val fields = rawLine.trim().split('|')

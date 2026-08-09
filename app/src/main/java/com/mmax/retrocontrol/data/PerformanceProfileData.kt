@@ -118,6 +118,30 @@ object PerformanceProfilePreferences {
         return load(prefs, policies) to id
     }
 
+    fun addFromTemplate(
+        prefs: SharedPreferences,
+        policies: List<CpuFrequencyPolicy>,
+        name: String,
+        maxFrequencies: Map<Int, Int>,
+    ): Pair<PerformanceProfileConfig, String>? {
+        if (policies.isEmpty()) return null
+        val current = load(prefs, policies)
+        val id = "performance-${UUID.randomUUID()}"
+        val profile = normalize(
+            PerformanceProfile(
+                id = id,
+                customName = name.trim().take(40).ifBlank { "Frequency profile" },
+                maxFrequencies = maxFrequencies,
+            ),
+            policies,
+        ) ?: return null
+        persist(
+            prefs,
+            current.profiles.filter(PerformanceProfile::isEditable) + profile,
+        )
+        return load(prefs, policies) to id
+    }
+
     fun addImported(
         prefs: SharedPreferences,
         policies: List<CpuFrequencyPolicy>,
@@ -310,5 +334,9 @@ object PerformanceTilePreferences {
 
     fun select(prefs: SharedPreferences, profileId: String) {
         prefs.edit { putString(Prefs.PERFORMANCE_TILE_PROFILE, profileId) }
+    }
+
+    fun clearSelection(prefs: SharedPreferences) {
+        prefs.edit { remove(Prefs.PERFORMANCE_TILE_PROFILE) }
     }
 }

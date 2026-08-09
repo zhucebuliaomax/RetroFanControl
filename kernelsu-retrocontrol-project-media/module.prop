@@ -1,0 +1,6 @@
+id=retrocontrol_project_media
+name=RetroControl MediaProjection Auto Grant
+version=1.0.0
+versionCode=1
+author=max
+description=Automatically grants PROJECT_MEDIA to com.mmax.retrocontrol at boot so MediaProjection requests complete without a confirmation dialog.

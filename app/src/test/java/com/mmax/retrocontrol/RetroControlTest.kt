@@ -77,6 +77,61 @@ class RetroControlTest {
     }
 
     @Test
+    fun foregroundAppCurveResolvesIndependentlyOfTileSelection() {
+        val preset = ControlPreset(
+            id = ControlPresetCatalog.DEFAULT_ID,
+            name = "Default",
+            isDefault = true,
+            fanCurveId = BuiltInFanCurve.QUIET.id,
+        )
+        val presets = ControlPresetConfig(
+            catalog = ControlPresetCatalog(listOf(preset)),
+            selectedPresetId = preset.id,
+            selectedNonGamePresetId = preset.id,
+        )
+
+        assertEquals(
+            BuiltInFanCurve.PERFORMANCE.id,
+            FanSelectionPreferences.resolveAppTargetProfileId(
+                presetConfig = presets,
+                fanCatalog = FanCurveCatalog(),
+                appProfile = AppControlProfile(
+                    packageName = "example.game",
+                    fanCurveId = BuiltInFanCurve.PERFORMANCE.id,
+                ),
+                appIsGame = true,
+            ),
+        )
+        assertEquals(
+            BuiltInFanCurve.QUIET.id,
+            FanSelectionPreferences.resolveAppTargetProfileId(
+                presetConfig = presets,
+                fanCatalog = FanCurveCatalog(),
+                appProfile = AppControlProfile(packageName = "example.app"),
+            ),
+        )
+    }
+
+    @Test
+    fun foregroundAppWithoutCurveDisablesTileButRemembersPreviousCurve() {
+        val selection = FanSelectionPreferences.selectionForAppTarget(
+            targetId = null,
+            previousSelection = FanSelectionConfig(
+                source = FanSelectionSource.DirectCurve(BuiltInFanCurve.PERFORMANCE.id),
+                enabled = true,
+            ),
+            fallbackProfileId = BuiltInFanCurve.QUIET.id,
+            fanCatalog = FanCurveCatalog(),
+        )
+
+        assertEquals(
+            FanSelectionSource.DirectCurve(BuiltInFanCurve.PERFORMANCE.id),
+            selection.source,
+        )
+        assertEquals(false, selection.enabled)
+    }
+
+    @Test
     fun presetCatalog_keepsBuiltInDefaultWhenCustomPresetIsRemoved() {
         val default = ControlPresetCatalog.defaultPreset()
         val custom = ControlPreset(id = "custom", name = "Custom")

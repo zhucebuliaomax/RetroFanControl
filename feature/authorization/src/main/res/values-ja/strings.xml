@@ -2,7 +2,7 @@
 <resources>
     <string name="authorization_title">権限管理</string>
     <string name="authorization_telemetry_overlay">テレメトリーオーバーレイ</string>
-    <string name="authorization_telemetry_overlay_summary">データ領域をタップして表示を切り替え、詳細表示で現在のカーブを調整・確認できます</string>
+    <string name="authorization_telemetry_overlay_summary">データ領域をタップすると、フォアグラウンドアプリのファンカーブとコア周波数を調整できます</string>
     <string name="authorization_telemetry_overlay_permission_missing">権限がありません</string>
     <string name="authorization_auto_start">起動時に開始</string>
     <string name="authorization_auto_start_enabled">有効、再起動後にハードウェアプロファイルを自動的に再開できます</string>

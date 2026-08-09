@@ -81,6 +81,14 @@
     <string name="average_short">Avg</string>
     <string name="maximum_short">Max</string>
     <string name="not_available">N/A</string>
+    <string name="efficiency_cores">Efficiency cores</string>
+    <string name="performance_cores">Performance cores</string>
+    <string name="prime_core">Prime core</string>
+    <string name="e_cores">E-cores</string>
+    <string name="p_cores">P-cores</string>
+    <string name="x_core">X-core</string>
+    <string name="decrease_core_frequency">Decrease %1$s frequency</string>
+    <string name="increase_core_frequency">Increase %1$s frequency</string>
 
     <string name="thermal_details_title">%1$s thermal details</string>
     <string name="thermal_average">Average</string>

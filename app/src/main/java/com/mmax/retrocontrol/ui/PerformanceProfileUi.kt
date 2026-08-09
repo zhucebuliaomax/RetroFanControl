@@ -269,7 +269,7 @@ private fun FrequencyPolicyEditor(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = formatCpuRange(policy.cpuIds),
+                    text = frequencyPolicyName(policy.cpuIds),
                     style = MaterialTheme.typography.titleMediumEmphasized,
                 )
                 Text(
@@ -296,6 +296,14 @@ private fun FrequencyPolicyEditor(
             )
         }
     }
+}
+
+@Composable
+private fun frequencyPolicyName(cpuIds: List<Int>): String = when (cpuIds.toSet()) {
+    setOf(0, 1, 2) -> stringResource(R.string.efficiency_cores)
+    setOf(3, 4, 5, 6) -> stringResource(R.string.performance_cores)
+    setOf(7) -> stringResource(R.string.prime_core)
+    else -> formatCpuRange(cpuIds)
 }
 
 internal fun formatFrequency(frequencyKhz: Int): String = when {

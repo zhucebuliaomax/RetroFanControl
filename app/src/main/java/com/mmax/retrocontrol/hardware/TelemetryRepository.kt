@@ -1,6 +1,7 @@
 package com.mmax.retrocontrol.hardware
 
 import com.mmax.retrocontrol.data.FanCurvePoint
+import com.mmax.retrocontrol.data.CpuFrequencyPolicy
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,6 +13,15 @@ data class TelemetrySnapshot(
     val fanAdjustEnabled: Boolean = false,
     val activeCurveName: String = "",
     val activeCurvePoints: List<FanCurvePoint> = emptyList(),
+    val frequency: FrequencyTelemetry = FrequencyTelemetry(),
+)
+
+data class FrequencyTelemetry(
+    val policies: List<CpuFrequencyPolicy> = emptyList(),
+    val currentFrequenciesKhz: Map<Int, Int> = emptyMap(),
+    val targetMaxFrequenciesKhz: Map<Int, Int> = emptyMap(),
+    val adjustEnabled: Boolean = false,
+    val activeProfileName: String = "",
 )
 
 /** One in-process source of truth shared by the dashboard, fan loop and overlay. */
@@ -33,6 +43,26 @@ object TelemetryRepository {
                 fanAdjustEnabled = fanAdjustEnabled,
                 activeCurveName = activeCurveName,
                 activeCurvePoints = activeCurvePoints,
+            )
+        }
+    }
+
+    fun updateFrequency(
+        policies: List<CpuFrequencyPolicy>,
+        currentFrequenciesKhz: Map<Int, Int>,
+        targetMaxFrequenciesKhz: Map<Int, Int>,
+        adjustEnabled: Boolean,
+        activeProfileName: String,
+    ) {
+        mutable.update {
+            it.copy(
+                frequency = FrequencyTelemetry(
+                    policies = policies,
+                    currentFrequenciesKhz = currentFrequenciesKhz,
+                    targetMaxFrequenciesKhz = targetMaxFrequenciesKhz,
+                    adjustEnabled = adjustEnabled,
+                    activeProfileName = activeProfileName,
+                )
             )
         }
     }

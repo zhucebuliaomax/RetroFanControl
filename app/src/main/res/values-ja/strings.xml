@@ -83,6 +83,14 @@
     <string name="average_short">平均</string>
     <string name="maximum_short">最高</string>
     <string name="not_available">データなし</string>
+    <string name="efficiency_cores">高効率コア</string>
+    <string name="performance_cores">高性能コア</string>
+    <string name="prime_core">Prime コア</string>
+    <string name="e_cores">E-cores</string>
+    <string name="p_cores">P-cores</string>
+    <string name="x_core">X-core</string>
+    <string name="decrease_core_frequency">%1$s の周波数を下げる</string>
+    <string name="increase_core_frequency">%1$s の周波数を上げる</string>
 
     <string name="thermal_details_title">%1$s 温度の詳細</string>
     <string name="thermal_average">平均温度</string>

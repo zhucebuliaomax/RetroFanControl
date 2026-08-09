@@ -18,6 +18,9 @@ object FanController {
     @Volatile
     private var cachedPwmPath: String? = null
 
+    @Volatile
+    private var thermalOverrideActive = false
+
     fun discoverPwmPath(): String? {
         cachedPwmPath?.let { return it }
         val script = buildString {
@@ -85,14 +88,30 @@ object FanController {
     }
 
     /**
-     * Applies a stable normalized output. Direct PWM avoids alternating
-     * neighboring cooling states. If the kernel does not permit pwm1 writes,
-     * fall back to one deterministic integer cooling state.
+     * Applies direct PWM while the kernel has no thermal cooling demand. A non-zero cooling
+     * state remains owned by the kernel so manual curves cannot fight or undercut hardware
+     * thermal protection. If direct PWM is unavailable, use one deterministic cooling state.
      */
     fun writePercent(value: Double): Int {
         val percent = value.roundToInt().coerceIn(0, 100)
         val pwmPath = discoverPwmPath()
         if (pwmPath != null) {
+            val thermalState = readCurState()
+            if (thermalState > 0) {
+                if (!thermalOverrideActive) {
+                    Log.i(
+                        TAG,
+                        "Kernel thermal cooling is active at state $thermalState; " +
+                            "leaving PWM under thermal control",
+                    )
+                    thermalOverrideActive = true
+                }
+                return readPwmPercent(pwmPath)
+            }
+            if (thermalOverrideActive) {
+                Log.i(TAG, "Kernel thermal cooling released; resuming fan-curve PWM control")
+                thermalOverrideActive = false
+            }
             val pwm = (percent / 100.0 * PWM_MAX).roundToInt()
             if (Shell.cmd("echo $pwm > $pwmPath 2>/dev/null").exec().isSuccess) {
                 return percent
@@ -103,5 +122,18 @@ object FanController {
         val state = (percent / 100.0 * maxState).roundToInt()
         writeState(state)
         return percent
+    }
+
+    private fun readPwmPercent(path: String): Int {
+        val pwm = Shell.cmd("cat $path").exec().out.firstOrNull()
+            ?.trim()
+            ?.toIntOrNull()
+            ?.coerceIn(0, PWM_MAX)
+        return if (pwm == null) {
+            val maxState = readMaxState().coerceAtLeast(1)
+            (readCurState().toDouble() / maxState * 100.0).roundToInt()
+        } else {
+            (pwm.toDouble() / PWM_MAX * 100.0).roundToInt()
+        }
     }
 }

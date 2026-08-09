@@ -81,6 +81,14 @@
     <string name="average_short">平均</string>
     <string name="maximum_short">最高</string>
     <string name="not_available">无数据</string>
+    <string name="efficiency_cores">能效核心</string>
+    <string name="performance_cores">性能核心</string>
+    <string name="prime_core">超大核心</string>
+    <string name="e_cores">E-cores</string>
+    <string name="p_cores">P-cores</string>
+    <string name="x_core">X-core</string>
+    <string name="decrease_core_frequency">降低%1$s频率</string>
+    <string name="increase_core_frequency">提高%1$s频率</string>
 
     <string name="thermal_details_title">%1$s 温度详情</string>
     <string name="thermal_average">平均温度</string>

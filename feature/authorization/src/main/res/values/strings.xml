@@ -2,7 +2,7 @@
 <resources>
     <string name="authorization_title">Authorization management</string>
     <string name="authorization_telemetry_overlay">Telemetry overlay</string>
-    <string name="authorization_telemetry_overlay_summary">Tap the data area to cycle layouts; detailed layout can adjust and preview the active curve</string>
+    <string name="authorization_telemetry_overlay_summary">Tap the data area to show controls for the foreground app’s fan curve and core frequencies</string>
     <string name="authorization_telemetry_overlay_permission_missing">Permission not granted</string>
     <string name="authorization_auto_start">Start at boot</string>
     <string name="authorization_auto_start_enabled">Enabled; hardware profiles can resume after restart</string>

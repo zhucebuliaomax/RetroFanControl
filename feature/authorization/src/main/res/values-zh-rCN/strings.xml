@@ -2,7 +2,7 @@
 <resources>
     <string name="authorization_title">授权管理</string>
     <string name="authorization_telemetry_overlay">温度浮窗</string>
-    <string name="authorization_telemetry_overlay_summary">点击数据区域可循环切换样式；详细样式可调节并预览当前曲线</string>
+    <string name="authorization_telemetry_overlay_summary">点击数据区域可切换控制，为前台应用调节风扇曲线与核心频率</string>
     <string name="authorization_telemetry_overlay_permission_missing">未获取权限</string>
     <string name="authorization_auto_start">开机启动</string>
     <string name="authorization_auto_start_enabled">已开启，重启后可自动恢复硬件方案</string>

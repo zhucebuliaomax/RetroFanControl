@@ -24,12 +24,14 @@ import com.mmax.retrocontrol.data.FanCurvePreferences
 import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.ButtonLayoutProfile
 import com.mmax.retrocontrol.data.ButtonLayoutProfilePreferences
+import com.mmax.retrocontrol.data.CpuFrequencyPolicy
 import com.mmax.retrocontrol.data.FanSelectionPreferences
 import com.mmax.retrocontrol.data.FanControlConfig
 import com.mmax.retrocontrol.data.FanCurveSerializer
 import com.mmax.retrocontrol.data.PerformanceProfilePreferences
 import com.mmax.retrocontrol.data.PerformanceProfileResolver
 import com.mmax.retrocontrol.data.PerformanceTilePreferences
+import com.mmax.retrocontrol.data.PerformanceProfile
 import com.mmax.retrocontrol.data.PresetPreferences
 import com.mmax.retrocontrol.data.Prefs
 import com.mmax.retrocontrol.data.JoystickProfile
@@ -58,6 +60,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -76,6 +81,9 @@ class SystemControlService : Service() {
         private const val PROFILE_SWITCH_CHANNEL_ID = "profile_switches"
         private const val NOTIFICATION_ID = 1
         private const val PROFILE_SWITCH_NOTIFICATION_ID = 2
+        // LineageOS 23.2 keeps a heads-up banner visible for 5 seconds. Keep the promoted
+        // notification alive for another 5 seconds so its status-bar chip can be seen.
+        private const val PROFILE_SWITCH_NOTIFICATION_DURATION_MS = 10_000L
         const val ACTION_UPDATE = "com.mmax.retrocontrol.UPDATE"
         const val ACTION_SET_PROJECTION_INTENT =
             "com.mmax.retrocontrol.SET_PROJECTION_INTENT"
@@ -136,6 +144,8 @@ class SystemControlService : Service() {
     private var screenOffJob: Job? = null
     private var performanceJob: Job? = null
     private var buttonLayoutJob: Job? = null
+    private var profileSwitchNotificationJob: Job? = null
+    private val overlayAdjustmentMutex = Mutex()
     private var overlay: TelemetryOverlay? = null
     private lateinit var joystickEffects: JoystickEffectEngine
     private var lastNotificationUpdateMs = 0L
@@ -146,6 +156,12 @@ class SystemControlService : Service() {
 
     @Volatile
     private var fanConfig = FanControlConfig()
+
+    @Volatile
+    private var frequencyPolicies = emptyList<CpuFrequencyPolicy>()
+
+    @Volatile
+    private var activePerformanceProfile: PerformanceProfile? = null
 
     @Volatile
     private var joystickProfile: JoystickProfile? = null
@@ -205,14 +221,17 @@ class SystemControlService : Service() {
             Prefs.SELECTED_PRESET,
             Prefs.SELECTED_GAME_PROFILE,
             Prefs.SELECTED_NON_GAME_PROFILE,
-            Prefs.APP_PROFILE_CATALOG,
-            Prefs.FAN_SELECTION_SOURCE,
-            Prefs.FAN_SELECTION_CURVE,
-            Prefs.FAN_TILE_ENABLED -> {
+            Prefs.APP_PROFILE_CATALOG -> {
                 loadFanPreferences()
                 loadJoystickPreferences()
                 applyButtonLayout()
                 applyPerformanceProfile()
+            }
+            Prefs.FAN_SELECTION_SOURCE,
+            Prefs.FAN_SELECTION_CURVE,
+            Prefs.FAN_TILE_ENABLED -> {
+                loadFanPreferences()
+                FanQuickSettingsTile.requestRefresh(applicationContext)
             }
             Prefs.BUTTON_LAYOUT_PROFILE_CATALOG -> {
                 applyButtonLayout(force = true)
@@ -337,6 +356,7 @@ class SystemControlService : Service() {
         fanJob?.cancel()
         performanceJob?.cancel()
         buttonLayoutJob?.cancel()
+        cancelProfileSwitchNotification()
         overlay?.hide()
         overlay = null
         joystickEffects.destroy()
@@ -414,7 +434,9 @@ class SystemControlService : Service() {
         performanceJob?.cancel()
         performanceJob = scope.launch {
             val policies = CpuFrequencyController.detectPolicies()
+            frequencyPolicies = policies
             if (policies.isEmpty()) {
+                activePerformanceProfile = null
                 Log.w(TAG, "CPU frequency policies are unavailable")
                 return@launch
             }
@@ -450,23 +472,25 @@ class SystemControlService : Service() {
                 Prefs.LAST_APPLIED_PERFORMANCE_PROFILE,
                 null,
             )
-            if (
-                !force && performanceRequestInitialized &&
-                targetId == lastRequestedPerformanceProfileId
-            ) {
-                return@launch
-            }
-
             val target = if (targetId == null) {
                 if (previouslyApplied == null) {
                     performanceRequestInitialized = true
                     lastRequestedPerformanceProfileId = null
+                    activePerformanceProfile = null
                     return@launch
                 }
                 profileConfig.stockProfile
             } else {
                 profileConfig.profile(targetId)
             } ?: return@launch
+
+            if (
+                !force && performanceRequestInitialized &&
+                targetId == lastRequestedPerformanceProfileId
+            ) {
+                activePerformanceProfile = target
+                return@launch
+            }
 
             CpuFrequencyController.applyProfile(target, policies)
                 .onSuccess { result ->
@@ -476,6 +500,7 @@ class SystemControlService : Service() {
                     }
                     performanceRequestInitialized = true
                     lastRequestedPerformanceProfileId = targetId
+                    activePerformanceProfile = target
                     prefs.edit {
                         if (targetId == null) {
                             remove(Prefs.LAST_APPLIED_PERFORMANCE_PROFILE)
@@ -498,7 +523,11 @@ class SystemControlService : Service() {
                 val foreground = ForegroundAppResolver.currentPackageName()
                 if (foreground != foregroundPackageName) {
                     foregroundPackageName = foreground
-                    loadFanPreferences()
+                    if (foreground.isNullOrBlank()) {
+                        loadFanPreferences()
+                    } else {
+                        syncFanToForegroundApp(foreground)
+                    }
                     loadJoystickPreferences()
                     applyButtonLayout()
                     applyPerformanceProfile()
@@ -515,6 +544,21 @@ class SystemControlService : Service() {
                 delay(1_000L)
             }
         }
+    }
+
+    private fun syncFanToForegroundApp(packageName: String) {
+        val resolved = FanSelectionPreferences.syncToForegroundApp(
+            prefs = prefs,
+            suppliedFanConfig = FanCurvePreferences.load(prefs),
+            foregroundPackageName = packageName,
+            foregroundIsGame = AppProfilePreferences.isGame(this, packageName),
+        )
+        fanConfig = previewFanProfileId
+            ?.takeIf { resolved.catalog.profile(it) != null }
+            ?.let { resolved.copy(activeProfileId = it) }
+            ?: resolved
+        configRevision++
+        FanQuickSettingsTile.requestRefresh(applicationContext)
     }
 
     private fun promoteForMediaProjection() {
@@ -554,13 +598,28 @@ class SystemControlService : Service() {
             var appliedRevision = Long.MIN_VALUE
             var thermal = ThermalSnapshot()
             var lastThermalReadMs = 0L
+            var currentFrequencies = emptyMap<Int, Int>()
 
             while (isActive) {
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (now - lastThermalReadMs >= 500L) {
                     thermal = ThermalSensorReader.read()
+                    currentFrequencies = CpuFrequencyController.readCurrentFrequencies(
+                        frequencyPolicies.flatMap { it.cpuIds }
+                    )
                     lastThermalReadMs = now
                 }
+
+                val performanceProfile = activePerformanceProfile
+                TelemetryRepository.updateFrequency(
+                    policies = frequencyPolicies,
+                    currentFrequenciesKhz = currentFrequencies,
+                    targetMaxFrequenciesKhz = performanceProfile?.maxFrequencies.orEmpty(),
+                    adjustEnabled = performanceProfile != null && frequencyPolicies.isNotEmpty(),
+                    activeProfileName = performanceProfile
+                        ?.displayName(this@SystemControlService)
+                        .orEmpty(),
+                )
 
                 val config = fanConfig
                 val profile = config.activeProfile
@@ -637,6 +696,7 @@ class SystemControlService : Service() {
                 overlay = TelemetryOverlay(
                     context = applicationContext,
                     onAdjustFan = ::adjustActiveCurve,
+                    onAdjustFrequency = ::adjustActiveFrequency,
                 )
             }
             overlay?.show()
@@ -648,19 +708,145 @@ class SystemControlService : Service() {
 
     private fun adjustActiveCurve(deltaPercent: Int) {
         scope.launch {
-            val profile = fanConfig.activeProfile
-            val controlTemp = TelemetryRepository.state.value.thermal.controlTempC
-            if (profile == null || controlTemp <= 0.0) return@launch
-            runCatching {
-                FanCurvePreferences.adjustAroundTemperature(
-                    prefs = prefs,
-                    profileId = profile.id,
-                    tempC = controlTemp,
-                    deltaPercent = deltaPercent,
-                )
+            overlayAdjustmentMutex.withLock {
+                val profile = fanConfig.activeProfile
+                val controlTemp = TelemetryRepository.state.value.thermal.controlTempC
+                if (profile == null || controlTemp <= 0.0) return@withLock
+                runCatching {
+                    val appName = foregroundAppName() ?: return@runCatching
+                    val targetId = if (profile.customName != appName) {
+                        val cloned = FanCurvePreferences.add(
+                            prefs = prefs,
+                            name = appName,
+                            templatePoints = profile.points,
+                        )
+                        val clonedId = cloned.catalog.profiles.last().id
+                        bindFanCurveToForegroundApp(clonedId, cloned)
+                        clonedId
+                    } else {
+                        profile.id
+                    }
+                    val updated = FanCurvePreferences.adjustAroundTemperature(
+                        prefs = prefs,
+                        profileId = targetId,
+                        tempC = controlTemp,
+                        deltaPercent = deltaPercent,
+                    )
+                    fanConfig = updated.copy(activeProfileId = targetId)
+                    configRevision++
+                }.onFailure { error ->
+                    Log.e(TAG, "Unable to adjust the overlay fan curve", error)
+                }
             }
         }
     }
+
+    private fun adjustActiveFrequency(policyId: Int, direction: Int) {
+        scope.launch {
+            overlayAdjustmentMutex.withLock {
+                val policies = frequencyPolicies
+                val policy = policies.firstOrNull { it.id == policyId } ?: return@withLock
+                val steps = policy.supportedFrequencies
+                if (steps.size < 2 || direction == 0) return@withLock
+                val currentProfile = activePerformanceProfile ?: return@withLock
+                runCatching {
+                    val appName = foregroundAppName() ?: return@runCatching
+                    val target = if (
+                        (!currentProfile.isEditable || currentProfile.customName != appName)
+                    ) {
+                        val (config, id) = PerformanceProfilePreferences.addFromTemplate(
+                            prefs = prefs,
+                            policies = policies,
+                            name = appName,
+                            maxFrequencies = currentProfile.maxFrequencies,
+                        ) ?: return@runCatching
+                        bindPerformanceProfileToForegroundApp(
+                            id,
+                            config.profiles.map { it.id }.toSet(),
+                        )
+                        config.profile(id) ?: return@runCatching
+                    } else {
+                        currentProfile
+                    }
+                    val currentTarget = target.maxFrequencies[policyId]
+                        ?: policy.currentMaxFrequency
+                    val index = steps.indices.minByOrNull { stepIndex ->
+                        abs(steps[stepIndex].toLong() - currentTarget.toLong())
+                    } ?: return@runCatching
+                    val nextIndex = (index + direction.sign()).coerceIn(steps.indices)
+                    if (nextIndex == index) return@runCatching
+                    val updatedConfig = PerformanceProfilePreferences.update(
+                        prefs = prefs,
+                        policies = policies,
+                        profileId = target.id,
+                        name = target.customName.orEmpty(),
+                        maxFrequencies = target.maxFrequencies + (policyId to steps[nextIndex]),
+                    )
+                    activePerformanceProfile = updatedConfig.profile(target.id)
+                    applyPerformanceProfile(force = true)
+                }.onFailure { error ->
+                    Log.e(TAG, "Unable to adjust the overlay frequency profile", error)
+                }
+            }
+        }
+    }
+
+    private fun bindFanCurveToForegroundApp(
+        profileId: String,
+        config: FanControlConfig,
+    ) {
+        val packageName = foregroundPackageName ?: return
+        val fanIds = config.catalog.profiles.mapTo(mutableSetOf()) { it.id }
+        val joystickIds = JoystickProfilePreferences.load(prefs).profiles
+            .mapTo(mutableSetOf()) { it.id }
+        val presetConfig = PresetPreferences.load(prefs, fanIds, joystickIds)
+        AppProfilePreferences.setFanCurve(
+            prefs = prefs,
+            packageName = packageName,
+            fanCurveId = profileId,
+            availablePresetIds = presetConfig.catalog.presets.mapTo(mutableSetOf()) { it.id },
+            availableFanCurveIds = fanIds,
+            availableJoystickProfileIds = joystickIds,
+        )
+        FanSelectionPreferences.selectFollowPreset(prefs)
+    }
+
+    private fun bindPerformanceProfileToForegroundApp(
+        profileId: String,
+        performanceIds: Set<String>,
+    ) {
+        val packageName = foregroundPackageName ?: return
+        val fanIds = FanCurvePreferences.load(prefs).catalog.profiles
+            .mapTo(mutableSetOf()) { it.id }
+        val joystickIds = JoystickProfilePreferences.load(prefs).profiles
+            .mapTo(mutableSetOf()) { it.id }
+        val presetConfig = PresetPreferences.load(
+            prefs,
+            fanIds,
+            joystickIds,
+            performanceIds,
+        )
+        AppProfilePreferences.setPerformanceProfile(
+            prefs = prefs,
+            packageName = packageName,
+            performanceProfileId = profileId,
+            availablePresetIds = presetConfig.catalog.presets.mapTo(mutableSetOf()) { it.id },
+            availableFanCurveIds = fanIds,
+            availableJoystickProfileIds = joystickIds,
+            availablePerformanceProfileIds = performanceIds,
+        )
+        PerformanceTilePreferences.clearSelection(prefs)
+    }
+
+    private fun foregroundAppName(): String? {
+        val packageName = foregroundPackageName ?: return null
+        return runCatching {
+            val info = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(info).toString()
+        }.getOrDefault(packageName).trim().take(40).ifBlank { null }
+    }
+
+    private fun Int.sign(): Int = if (this < 0) -1 else 1
 
     private fun scheduleScreenOffSuspend() {
         screenOffJob?.cancel()
@@ -707,6 +893,7 @@ class SystemControlService : Service() {
     }
 
     private fun showProfileSwitchNotification(packageName: String?) {
+        cancelProfileSwitchNotification()
         if (packageName.isNullOrBlank()) return
         if (!prefs.getBoolean(Prefs.PROFILE_SWITCH_NOTIFICATIONS_ENABLED, true)) return
 
@@ -799,16 +986,29 @@ class SystemControlService : Service() {
         )
         val notification = NotificationCompat.Builder(this, PROFILE_SWITCH_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_tile_fan)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setContentTitle(getString(R.string.profile_switch_notification_title, appName))
             .setContentText(content)
             .setStyle(NotificationCompat.BigTextStyle().bigText(content))
             .setContentIntent(openApp)
-            .setAutoCancel(true)
+            .setOngoing(true)
+            .setRequestPromotedOngoing(true)
+            .setShortCriticalText(appName)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.notify(PROFILE_SWITCH_NOTIFICATION_ID, notification)
+        profileSwitchNotificationJob = scope.launch {
+            delay(PROFILE_SWITCH_NOTIFICATION_DURATION_MS)
+            notificationManager.cancel(PROFILE_SWITCH_NOTIFICATION_ID)
+        }
+    }
+
+    private fun cancelProfileSwitchNotification() {
+        profileSwitchNotificationJob?.cancel()
+        profileSwitchNotificationJob = null
         getSystemService(NotificationManager::class.java)
-            .notify(PROFILE_SWITCH_NOTIFICATION_ID, notification)
+            .cancel(PROFILE_SWITCH_NOTIFICATION_ID)
     }
 
     private fun buildNotification(): Notification {

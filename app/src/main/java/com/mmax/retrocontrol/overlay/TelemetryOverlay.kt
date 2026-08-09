@@ -54,16 +54,20 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mmax.retrocontrol.R
+import com.mmax.retrocontrol.data.CpuFrequencyPolicy
 import com.mmax.retrocontrol.data.Prefs
 import com.mmax.retrocontrol.data.FanCurvePoint
 import com.mmax.retrocontrol.hardware.TelemetryRepository
 import com.mmax.retrocontrol.hardware.TemperatureSummary
 import com.mmax.retrocontrol.util.formatTemperature
+import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 class TelemetryOverlay(
     private val context: Context,
     private val onAdjustFan: (Int) -> Unit,
+    private val onAdjustFrequency: (Int, Int) -> Unit,
 ) {
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val prefs = context.getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
@@ -97,16 +101,9 @@ class TelemetryOverlay(
             }
             newHost.setContent {
                 OverlayContent(
-                    initialDisplayMode = OverlayDisplayMode.fromStored(
-                        prefs.getString(Prefs.OVERLAY_DISPLAY_MODE, null)
-                    ),
-                    onDisplayModeChanged = { displayMode ->
-                        prefs.edit {
-                            putString(Prefs.OVERLAY_DISPLAY_MODE, displayMode.storageValue)
-                        }
-                    },
                     onDrag = ::moveBy,
                     onAdjustFan = onAdjustFan,
+                    onAdjustFrequency = onAdjustFrequency,
                     onClose = {
                         prefs.edit { putBoolean(Prefs.OVERLAY_ENABLED, false) }
                     },
@@ -153,36 +150,40 @@ class TelemetryOverlay(
 
 /**
  * Ordered layout registry for the floating window. Adding another presentation
- * later only requires one enum entry and one rendering branch; cycling and
- * persistence remain unchanged.
+ * later only requires one enum entry and one rendering branch; cycling remains
+ * unchanged and every newly opened overlay still starts in data-only mode.
  */
-private enum class OverlayDisplayMode(val storageValue: String) {
-    DATA_ONLY("data_only"),
-    DATA_FAN_CURVE("data_fan_curve");
+private enum class OverlayDisplayMode {
+    DATA_ONLY,
+    DATA_FAN_CURVE;
 
     fun next(): OverlayDisplayMode = entries[(ordinal + 1) % entries.size]
-
-    companion object {
-        fun fromStored(value: String?): OverlayDisplayMode =
-            entries.firstOrNull { it.storageValue == value } ?: DATA_FAN_CURVE
-    }
 }
+
+private data class OverlayCoreGroup(
+    val labelRes: Int,
+    val cpuIds: Set<Int>,
+)
+
+private val overlayCoreGroups = listOf(
+    OverlayCoreGroup(R.string.e_cores, setOf(0, 1, 2)),
+    OverlayCoreGroup(R.string.p_cores, setOf(3, 4, 5, 6)),
+    OverlayCoreGroup(R.string.x_core, setOf(7)),
+)
 
 @Composable
 private fun OverlayContent(
-    initialDisplayMode: OverlayDisplayMode,
-    onDisplayModeChanged: (OverlayDisplayMode) -> Unit,
     onDrag: (Float, Float) -> Unit,
     onAdjustFan: (Int) -> Unit,
+    onAdjustFrequency: (Int, Int) -> Unit,
     onClose: () -> Unit,
 ) {
     val telemetry by TelemetryRepository.state.collectAsState()
     val thermal = telemetry.thermal
-    var displayMode by remember { mutableStateOf(initialDisplayMode) }
+    var displayMode by remember { mutableStateOf(OverlayDisplayMode.DATA_ONLY) }
 
     fun cycleDisplayMode() {
         displayMode = displayMode.next()
-        onDisplayModeChanged(displayMode)
     }
 
     Box(
@@ -207,14 +208,8 @@ private fun OverlayContent(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End,
                 ) {
-                    Text(
-                        stringResource(R.string.live_telemetry),
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f),
-                    )
                     Icon(
                         Icons.Default.Close,
                         contentDescription = stringResource(R.string.close),
@@ -228,19 +223,21 @@ private fun OverlayContent(
                 OverlayTemperatureGroup(stringResource(R.string.cpu), thermal.cpuSummary)
                 OverlayTemperatureGroup(stringResource(R.string.gpu), thermal.gpuSummary)
                 Spacer(Modifier.height(1.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    OverlayCompactMetric(
-                        stringResource(R.string.ddr_short),
-                        thermal.ddr?.let { formatTemperature(it.tempC) }
-                            ?: stringResource(R.string.not_available),
-                    )
-                    OverlayCompactMetric(
-                        stringResource(R.string.battery_short),
-                        thermal.battery?.let { formatTemperature(it.tempC) }
-                            ?: stringResource(R.string.not_available),
+                OverlayDualMetricGroup(
+                    firstTitle = stringResource(R.string.ddr_short),
+                    firstValue = thermal.ddr?.let { formatTemperature(it.tempC) }
+                        ?: stringResource(R.string.not_available),
+                    secondTitle = stringResource(R.string.battery_short),
+                    secondValue = thermal.battery?.let { formatTemperature(it.tempC) }
+                        ?: stringResource(R.string.not_available),
+                )
+                overlayCoreGroups.forEach { group ->
+                    OverlayFrequencyGroup(
+                        title = stringResource(group.labelRes),
+                        frequencyKhz = averageFrequency(
+                            telemetry.frequency.currentFrequenciesKhz,
+                            group.cpuIds,
+                        ),
                     )
                 }
             }
@@ -275,6 +272,21 @@ private fun OverlayContent(
                         increase = true,
                         enabled = telemetry.fanAdjustEnabled,
                         onClick = { onAdjustFan(5) },
+                    )
+                }
+                Spacer(Modifier.height(3.dp))
+                overlayCoreGroups.forEach { group ->
+                    val policy = telemetry.frequency.policies.policyFor(group.cpuIds)
+                    OverlayFrequencyControl(
+                        title = stringResource(group.labelRes),
+                        policy = policy,
+                        targetFrequencyKhz = policy?.let {
+                            telemetry.frequency.targetMaxFrequenciesKhz[it.id]
+                        },
+                        enabled = telemetry.frequency.adjustEnabled,
+                        onAdjust = { direction ->
+                            policy?.let { onAdjustFrequency(it.id, direction) }
+                        },
                     )
                 }
                 Spacer(Modifier.height(4.dp))
@@ -390,6 +402,86 @@ private fun OverlayFanButton(
 }
 
 @Composable
+private fun OverlayFrequencyControl(
+    title: String,
+    policy: CpuFrequencyPolicy?,
+    targetFrequencyKhz: Int?,
+    enabled: Boolean,
+    onAdjust: (Int) -> Unit,
+) {
+    val frequencies = policy?.supportedFrequencies.orEmpty()
+    val selectedIndex = targetFrequencyKhz?.let { target ->
+        frequencies.indices.minByOrNull { index ->
+            abs(frequencies[index].toLong() - target.toLong())
+        }
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OverlayFrequencyButton(
+            increase = false,
+            enabled = enabled && selectedIndex != null && selectedIndex > 0,
+            description = stringResource(R.string.decrease_core_frequency, title),
+            onClick = { onAdjust(-1) },
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = title,
+                color = Color(0xFFFFB000),
+                fontSize = 9.5.sp,
+                lineHeight = 10.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = targetFrequencyKhz?.let(::formatOverlayFrequency)
+                    ?: stringResource(R.string.not_available),
+                color = Color.White,
+                fontSize = 12.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        OverlayFrequencyButton(
+            increase = true,
+            enabled = enabled && selectedIndex != null && selectedIndex < frequencies.lastIndex,
+            description = stringResource(R.string.increase_core_frequency, title),
+            onClick = { onAdjust(1) },
+        )
+    }
+}
+
+@Composable
+private fun OverlayFrequencyButton(
+    increase: Boolean,
+    enabled: Boolean,
+    description: String,
+    onClick: () -> Unit,
+) {
+    OutlinedIconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(34.dp),
+        shape = RoundedCornerShape(11.dp),
+        border = BorderStroke(
+            1.dp,
+            if (enabled) Color(0x99FFFFFF) else Color(0x33FFFFFF),
+        ),
+        colors = IconButtonDefaults.outlinedIconButtonColors(
+            contentColor = Color.White,
+            disabledContentColor = Color(0x55FFFFFF),
+        ),
+    ) {
+        Icon(
+            imageVector = if (increase) Icons.Default.Add else Icons.Default.Remove,
+            contentDescription = description,
+            modifier = Modifier.size(19.dp),
+        )
+    }
+}
+
+@Composable
 private fun OverlayTemperatureGroup(
     title: String,
     summary: TemperatureSummary,
@@ -439,6 +531,50 @@ private fun OverlayTemperatureGroup(
 }
 
 @Composable
+private fun OverlayDualMetricGroup(
+    firstTitle: String,
+    firstValue: String,
+    secondTitle: String,
+    secondValue: String,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0x1AFFFFFF), RoundedCornerShape(7.dp))
+            .padding(horizontal = 7.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        OverlayCompactMetric(firstTitle, firstValue)
+        OverlayCompactMetric(secondTitle, secondValue)
+    }
+}
+
+@Composable
+private fun OverlayFrequencyGroup(title: String, frequencyKhz: Int?) {
+    val unavailable = stringResource(R.string.not_available)
+    Text(
+        text = buildAnnotatedString {
+            withStyle(SpanStyle(color = Color(0xFFFFB000), fontWeight = FontWeight.Bold)) {
+                append("$title: ")
+            }
+            withStyle(SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)) {
+                append(
+                    frequencyKhz?.let(::formatOverlayFrequency)
+                        ?: unavailable
+                )
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0x1AFFFFFF), RoundedCornerShape(7.dp))
+            .padding(horizontal = 7.dp, vertical = 5.dp),
+        fontSize = 9.5.sp,
+        lineHeight = 11.sp,
+        maxLines = 1,
+    )
+}
+
+@Composable
 private fun OverlayCompactMetric(title: String, value: String) {
     Text(
         text = "$title: $value",
@@ -447,6 +583,26 @@ private fun OverlayCompactMetric(title: String, value: String) {
         lineHeight = 10.sp,
         fontWeight = FontWeight.SemiBold,
     )
+}
+
+private fun averageFrequency(values: Map<Int, Int>, cpuIds: Set<Int>): Int? = cpuIds
+    .mapNotNull(values::get)
+    .filter { it > 0 }
+    .takeIf { it.isNotEmpty() }
+    ?.average()
+    ?.roundToInt()
+
+private fun List<CpuFrequencyPolicy>.policyFor(cpuIds: Set<Int>): CpuFrequencyPolicy? =
+    filter { policy -> policy.cpuIds.any(cpuIds::contains) }
+        .maxByOrNull { policy -> policy.cpuIds.count(cpuIds::contains) }
+
+private fun formatOverlayFrequency(frequencyKhz: Int): String = when {
+    frequencyKhz >= 1_000_000 -> String.format(
+        Locale.getDefault(),
+        "%.2f GHz",
+        frequencyKhz / 1_000_000.0,
+    )
+    else -> String.format(Locale.getDefault(), "%.0f MHz", frequencyKhz / 1_000.0)
 }
 
 private fun tempColor(value: Double): Color = when {
