@@ -80,11 +80,11 @@ object FanController {
      * governor may replace cur_state in roughly one second, so suppressing
      * identical writes would make manual fan control unreliable.
      */
-    fun writeState(value: Int) {
-        val path = discoverFanPath() ?: return
+    fun writeState(value: Int): Boolean {
+        val path = discoverFanPath() ?: return false
         val maxState = readMaxState().coerceAtLeast(1)
         val clamped = value.coerceIn(0, maxState)
-        Shell.cmd("echo $clamped > $path/cur_state 2>/dev/null").exec()
+        return Shell.cmd("echo $clamped > $path/cur_state 2>/dev/null").exec().isSuccess
     }
 
     /**

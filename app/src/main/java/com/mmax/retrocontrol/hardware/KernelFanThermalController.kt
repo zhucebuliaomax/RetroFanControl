@@ -54,35 +54,48 @@ object KernelFanThermalController {
         }
         originalEditor.commit()
 
-        var success = true
-        trips.groupBy { it.zonePath }.forEach { (zonePath, zoneTrips) ->
+        val zones = trips.groupBy { it.zonePath }
+        val targetModes = zones.mapValues { (_, zoneTrips) ->
             val kind = zoneTrips.first().kind
-            val targetMode = if (
+            if (
                 disableThermalProtection && kind in setOf(ThermalKind.CPU, ThermalKind.GPU)
             ) {
                 "disabled"
             } else {
                 "enabled"
             }
+        }
 
-            // Rebinding the zone clears stale cooling demand before its fan trips change.
+        var success = true
+        zones.forEach { (zonePath, zoneTrips) ->
             if (!setZoneMode(zonePath, zoneTrips.first().zoneType, "disabled")) {
                 success = false
             }
-            zoneTrips.forEach { trip ->
-                val disabled = when (trip.kind) {
-                    ThermalKind.CPU, ThermalKind.GPU -> true
-                    ThermalKind.USB -> disableUsbFanControl
-                    else -> false
-                }
-                val original = prefs.getInt(trip.preferenceKey, trip.currentTemp)
-                val target = if (disabled) DISABLED_TRIP_TEMP_MILLIDEGREES else original
-                if (!Shell.cmd("echo $target > ${trip.tempPath} 2>/dev/null").exec().isSuccess) {
-                    success = false
-                    Log.w(TAG, "Unable to write ${trip.zoneType} fan trip ${trip.tripIndex}")
-                }
+        }
+        trips.forEach { trip ->
+            val disabled = when (trip.kind) {
+                ThermalKind.CPU, ThermalKind.GPU -> true
+                ThermalKind.USB -> disableUsbFanControl
+                else -> false
             }
-            if (!setZoneMode(zonePath, zoneTrips.first().zoneType, targetMode)) {
+            val original = prefs.getInt(trip.preferenceKey, trip.currentTemp)
+            val target = if (disabled) DISABLED_TRIP_TEMP_MILLIDEGREES else original
+            if (!Shell.cmd("echo $target > ${trip.tempPath} 2>/dev/null").exec().isSuccess) {
+                success = false
+                Log.w(TAG, "Unable to write ${trip.zoneType} fan trip ${trip.tripIndex}")
+            }
+        }
+        if (disableUsbFanControl && !FanController.writeState(0)) {
+            success = false
+            Log.w(TAG, "Unable to clear stale pwm-fan cooling state")
+        }
+        zones.forEach { (zonePath, zoneTrips) ->
+            if (!setZoneMode(
+                    zonePath,
+                    zoneTrips.first().zoneType,
+                    targetModes.getValue(zonePath),
+                )
+            ) {
                 success = false
             }
         }
