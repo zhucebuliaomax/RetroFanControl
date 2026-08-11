@@ -43,10 +43,10 @@ Application entry points and root-shell management live at the package root:
 
 ## Core data flow
 
-1. `ThermalSensorReader` scans thermal zones. `ThermalClassifier` retains only sensors that clearly represent the CPU, GPU, DDR/DRAM, or battery.
-2. `ThermalSnapshot` summarizes each category and uses the higher of the CPU and GPU average temperatures as the control temperature.
-3. `SystemControlService` reads the active curve and interpolates the control temperature into a target fan percentage.
-4. `FanResponseController` applies window filtering, output deadband evaluation, and ramping.
+1. `ThermalSensorReader` scans thermal zones. `ThermalClassifier` retains CPU, GPU, DDR/DRAM, battery, and USB sensors.
+2. `ThermalSnapshot` uses the higher CPU/GPU average as the app control temperature and retains USB temperature separately.
+3. `SystemControlService` evaluates the active app curve and the optional fixed USB thermal curve, then selects the higher requested fan percentage.
+4. Independent `FanResponseController` instances apply filtering, output deadband evaluation, and ramping to the app and USB curves.
 5. `FanController` writes to `pwm1` when available and falls back to `cooling_device/cur_state` otherwise.
 6. `TelemetryRepository` provides the same runtime state to the dashboard, notification, and overlay.
 

@@ -25,6 +25,7 @@ import com.mmax.retrocontrol.data.ControlItemJson
 import com.mmax.retrocontrol.data.FanControlConfig
 import com.mmax.retrocontrol.data.FanCurvePoint
 import com.mmax.retrocontrol.data.FanCurvePreferences
+import com.mmax.retrocontrol.data.FanCurveSerializer
 import com.mmax.retrocontrol.data.FanSelectionConfig
 import com.mmax.retrocontrol.data.FanSelectionPreferences
 import com.mmax.retrocontrol.data.FanSelectionSource
@@ -33,6 +34,8 @@ import com.mmax.retrocontrol.data.PerformanceProfileConfig
 import com.mmax.retrocontrol.data.PerformanceProfilePreferences
 import com.mmax.retrocontrol.data.PerformanceTilePreferences
 import com.mmax.retrocontrol.data.Prefs
+import com.mmax.retrocontrol.data.UsbThermalFanControl
+import com.mmax.retrocontrol.data.UsbThermalFanCurvePreferences
 import com.mmax.retrocontrol.data.JoystickProfileCatalog
 import com.mmax.retrocontrol.data.JoystickProfilePreferences
 import com.mmax.retrocontrol.data.JoystickSelectionPreferences
@@ -74,7 +77,7 @@ data class DashboardState(
     val overlayEnabled: Boolean = false,
     val autoStartEnabled: Boolean = true,
     val profileSwitchToastsEnabled: Boolean = false,
-    val usbThermalDisabled: Boolean = false,
+    val usbThermalControl: UsbThermalFanControl = UsbThermalFanControl(),
     val thermalProtectionDisabled: Boolean = false,
     val installedApps: List<InstalledAppInfo> = emptyList(),
     val appProfiles: Map<String, AppControlProfile> = emptyMap(),
@@ -182,7 +185,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     Prefs.PROFILE_SWITCH_TOASTS_ENABLED,
                     false,
                 ),
-                usbThermalDisabled = prefs.getBoolean(Prefs.USB_THERMAL_DISABLED, false),
+                usbThermalControl = UsbThermalFanCurvePreferences.load(prefs),
                 thermalProtectionDisabled = prefs.getBoolean(
                     Prefs.THERMAL_PROTECTION_DISABLED,
                     false,
@@ -787,6 +790,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         settings.put("overlayEnabled", state.overlayEnabled)
         settings.put("autoStartEnabled", state.autoStartEnabled)
         settings.put("profileSwitchToastsEnabled", state.profileSwitchToastsEnabled)
+        settings.put("usbThermalControlEnabled", state.usbThermalControl.enabled)
+        settings.put(
+            "usbThermalFanCurve",
+            FanCurveSerializer.serialize(state.usbThermalControl.profile.points),
+        )
+        settings.put(
+            "usbThermalFanCurveDefault",
+            FanCurveSerializer.serialize(state.usbThermalControl.profile.defaultPoints),
+        )
         settings.put("thermalProtectionDisabled", state.thermalProtectionDisabled)
         settings.put("overlayX", prefs.getInt(Prefs.OVERLAY_X, 100))
         settings.put("overlayY", prefs.getInt(Prefs.OVERLAY_Y, 100))
@@ -1026,6 +1038,26 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             if (settings.has("overlayX")) putInt(Prefs.OVERLAY_X, settings.getInt("overlayX"))
             if (settings.has("overlayY")) putInt(Prefs.OVERLAY_Y, settings.getInt("overlayY"))
         }
+        if (settings.has("usbThermalFanCurve")) {
+            val factory = UsbThermalFanControl.factoryPoints
+            UsbThermalFanCurvePreferences.replace(
+                prefs = prefs,
+                enabled = settings.optBoolean("usbThermalControlEnabled", true),
+                points = FanCurveSerializer.parse(
+                    settings.optString("usbThermalFanCurve"),
+                    factory,
+                ),
+                defaultPoints = FanCurveSerializer.parse(
+                    settings.optString("usbThermalFanCurveDefault"),
+                    factory,
+                ),
+            )
+        } else if (settings.has("usbThermalControlEnabled")) {
+            UsbThermalFanCurvePreferences.setEnabled(
+                prefs,
+                settings.getBoolean("usbThermalControlEnabled"),
+            )
+        }
         loadPreferences()
         SystemControlService.startOrUpdate(context)
     }
@@ -1035,7 +1067,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         prefs.edit {
             clear()
             thermalTripBackups.forEach { (key, value) -> putInt(key, value as Int) }
-            putBoolean(Prefs.USB_THERMAL_DISABLED, false)
         }
         loadPreferences()
         SystemControlService.startOrUpdate(getApplication())
@@ -1057,9 +1088,31 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         mutableState.update { it.copy(profileSwitchToastsEnabled = enabled) }
     }
 
-    fun setUsbThermalDisabled(disabled: Boolean) {
-        prefs.edit { putBoolean(Prefs.USB_THERMAL_DISABLED, disabled) }
-        mutableState.update { it.copy(usbThermalDisabled = disabled) }
+    fun setUsbThermalControlEnabled(enabled: Boolean) {
+        val config = UsbThermalFanCurvePreferences.setEnabled(prefs, enabled)
+        mutableState.update { it.copy(usbThermalControl = config) }
+        SystemControlService.startOrUpdate(getApplication())
+    }
+
+    fun setUsbThermalFanCurve(points: List<FanCurvePoint>) {
+        val config = runCatching {
+            UsbThermalFanCurvePreferences.savePoints(prefs, points)
+        }.getOrNull() ?: return
+        mutableState.update { it.copy(usbThermalControl = config) }
+        SystemControlService.startOrUpdate(getApplication())
+    }
+
+    fun setUsbThermalFanCurveAsDefault(points: List<FanCurvePoint>) {
+        val config = runCatching {
+            UsbThermalFanCurvePreferences.setCurrentAsDefault(prefs, points)
+        }.getOrNull() ?: return
+        mutableState.update { it.copy(usbThermalControl = config) }
+        SystemControlService.startOrUpdate(getApplication())
+    }
+
+    fun resetUsbThermalFanCurve() {
+        val config = UsbThermalFanCurvePreferences.reset(prefs)
+        mutableState.update { it.copy(usbThermalControl = config) }
         SystemControlService.startOrUpdate(getApplication())
     }
 

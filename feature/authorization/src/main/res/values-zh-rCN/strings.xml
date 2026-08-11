@@ -22,14 +22,15 @@
     <string name="authorization_notifications">通知设置</string>
     <string name="authorization_notifications_enabled">已开启</string>
     <string name="authorization_notifications_disabled">已关闭</string>
-    <string name="authorization_disable_usb_thermal">关闭 USB 温控</string>
+    <string name="authorization_usb_thermal_control">USB 温控</string>
+    <string name="authorization_usb_thermal_fan_curve">USB 温控风扇曲线</string>
     <string name="authorization_caution">注意</string>
     <string name="authorization_data">数据</string>
     <string name="authorization_export_data">导出所有数据</string>
     <string name="authorization_import_data">导入数据</string>
     <string name="authorization_import_data_summary">导入数据不会替换本地数据</string>
     <string name="authorization_reset_data">重置所有数据</string>
-    <string name="authorization_disable_usb_thermal_footer">默认的 USB 温控策略非常激进：达到 43°C 时风扇会升至约半速，达到 45°C 时则会接近全速。更多详情请查看 RP6 内核温控策略。设备充电时经常会触发这种激进的升速策略。拆解 RP6 后可以发现，风扇几乎无法为 USB 接口提供有效气流，所以这种行为的实际收益存疑。\n此选项会关闭 USB 温控风扇控制，请自行承担风险。</string>
+    <string name="authorization_usb_thermal_footer">为避免多个控制方争抢风扇，内核 USB 风扇策略已被关闭。启用后，RetroControl 会应用独立的 USB 温度曲线，并在它与当前应用曲线之间采用较高的输出。默认曲线沿用原厂 43°C 和 45°C 阈值。更多详情请查看 RP6 内核温控策略。</string>
     <string name="authorization_usb_thermal_strategy">RP6 内核温控策略</string>
     <string name="authorization_open_usb_thermal_strategy">打开 RP6 内核温控策略</string>
     <string name="authorization_usb_thermal_strategy_url">https://github.com/zhucebuliaomax/RetroFanControl/blob/codex/dev/docs/RP6%20Kernel%20Thermal%20Strategy.md</string>

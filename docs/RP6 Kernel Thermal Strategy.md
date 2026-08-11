@@ -78,14 +78,11 @@ The USB thermal sensor has a more aggressive cooling policy, intended to protect
 | 43°C | 6–7 | 58.8% | 41°C |
 | 45°C | 7–8 | 68.6% | 42°C |
 
-## Relationship to application fan control
+## Relationship to RetroControl fan control
 
-The kernel policy remains active and controls the same `pwm-fan` cooling device. An application-defined curve can provide earlier cooling, lower noise, or a user-selected response, but it must not be considered a replacement for kernel protection.
+The tables above describe the stock kernel policy. While RetroControl's service is active, it suppresses only the CPU/GPU/USB trip points bound to `pwm-fan`, disables the fan-only `usb-therm` zone, and owns the fan output through `pwm1`. CPU/GPU frequency throttling, hotplug, thermal pause, and other protection mechanisms remain independent.
 
-- Below every kernel fan trip point, the kernel requests state 0; an application may choose to output a non-zero PWM value proactively.
-- When GPU, CPU, or USB temperature reaches a listed threshold, the kernel submits its own cooling-state request.
-- Treat the actual shared cooling-device state as the highest demand across all thermal zones; do not infer fan behavior from only one zone.
-- The instantaneous `pwm1` and `cooling_device34/cur_state` values can be used for runtime validation, but they can be affected by contention between application writes and kernel thermal management.
+RetroControl reproduces the stock USB fan thresholds as an editable app-owned curve. The service evaluates that curve only from `usb-therm`, evaluates the active app curve from CPU/GPU temperature, and writes the higher requested output. This avoids simultaneous kernel and app writers for the same physical PWM output.
 
 ## Read-only validation commands
 

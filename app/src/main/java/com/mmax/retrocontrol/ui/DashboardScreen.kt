@@ -118,12 +118,14 @@ import com.mmax.retrocontrol.designsystem.FocusScrollMargin
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 import com.mmax.retrocontrol.feature.authorization.AuthorizationManagementSection
 import com.mmax.retrocontrol.feature.authorization.AuthorizationUiState
+import com.mmax.retrocontrol.feature.authorization.R as AuthorizationR
 import com.mmax.retrocontrol.feature.fan.FanProfileItemUiState
 import com.mmax.retrocontrol.feature.fan.FanProfileSectionState
 import com.mmax.retrocontrol.feature.fan.FanProfilesSection
 import com.mmax.retrocontrol.feature.joystick.JoystickProfileEditorDialog
 import com.mmax.retrocontrol.feature.joystick.JoystickProfileUiState
 import com.mmax.retrocontrol.feature.joystick.JoystickProfilesSection
+import com.mmax.retrocontrol.feature.joystick.AddJoystickProfileButton
 import com.mmax.retrocontrol.feature.joystick.JoystickRgbMode
 import com.mmax.retrocontrol.feature.joystick.R as JoystickR
 import com.mmax.retrocontrol.service.SystemControlService
@@ -237,6 +239,7 @@ fun DashboardScreen(
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     var editingProfileId by remember { mutableStateOf<String?>(null) }
+    var editingUsbThermalCurve by remember { mutableStateOf(false) }
     var restoreFanCurveFocusId by remember { mutableStateOf<String?>(null) }
     var editingPresetId by remember { mutableStateOf<String?>(null) }
     var restorePresetFocusId by remember { mutableStateOf<String?>(null) }
@@ -605,15 +608,12 @@ fun DashboardScreen(
             )
         },
         joystickAction = {
-            ControlTransferFabMenu(
-                addLabel = stringResource(JoystickR.string.joystick_add_profile),
-                onAdd = {
+            AddJoystickProfileButton(
+                onClick = {
                     editingJoystickProfileId = vm.addJoystickProfile(
                         resources.getString(JoystickR.string.joystick_new_profile)
                     )
                 },
-                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
-                onExport = { exportListKind = ExportListKind.JOYSTICK },
                 modifier = Modifier
                     .focusRequester(addJoystickProfileFocusRequester)
                     .focusProperties {
@@ -647,15 +647,12 @@ fun DashboardScreen(
             )
         },
         buttonLayoutAction = {
-            ControlTransferFabMenu(
-                addLabel = stringResource(R.string.add_button_layout),
-                onAdd = {
+            AddButtonLayoutProfileButton(
+                onClick = {
                     editingButtonLayoutProfileId = vm.addButtonLayoutProfile(
                         resources.getString(R.string.new_button_layout),
                     )
                 },
-                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
-                onExport = { exportListKind = ExportListKind.BUTTON_LAYOUT },
                 modifier = Modifier
                     .focusRequester(addButtonLayoutProfileFocusRequester)
                     .focusProperties {
@@ -755,15 +752,12 @@ fun DashboardScreen(
             )
         },
         performanceAction = {
-            ControlTransferFabMenu(
-                addLabel = stringResource(R.string.add_performance_profile),
-                onAdd = {
+            AddPerformanceProfileButton(
+                onClick = {
                     vm.addPerformanceProfile(
                         resources.getString(R.string.new_performance_profile)
                     )?.let { editingPerformanceProfileId = it }
                 },
-                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
-                onExport = { exportListKind = ExportListKind.PERFORMANCE },
                 modifier = Modifier
                     .focusRequester(addPerformanceProfileFocusRequester)
                     .focusProperties {
@@ -875,7 +869,7 @@ fun DashboardScreen(
                     telemetryOverlayEnabled = state.overlayEnabled,
                     autoStartEnabled = state.autoStartEnabled,
                     profileSwitchToastsEnabled = state.profileSwitchToastsEnabled,
-                    usbThermalDisabled = state.usbThermalDisabled,
+                    usbThermalControlEnabled = state.usbThermalControl.enabled,
                     thermalProtectionDisabled = state.thermalProtectionDisabled,
                     rootGranted = hasRoot,
                     overlayPermissionGranted = overlayPermissionGranted,
@@ -904,7 +898,8 @@ fun DashboardScreen(
                     vm.setProfileSwitchToastsEnabled(enabled)
                     onProfileSwitchToastsEnabled(enabled)
                 },
-                onUsbThermalDisabledChange = vm::setUsbThermalDisabled,
+                onUsbThermalControlEnabledChange = vm::setUsbThermalControlEnabled,
+                onUsbThermalFanCurveClick = { editingUsbThermalCurve = true },
                 onThermalProtectionDisabledChange = vm::setThermalProtectionDisabled,
                 onRefreshRoot = onRefreshRoot,
                 onOpenKernelSu = { context.openKernelSu() },
@@ -1163,6 +1158,25 @@ fun DashboardScreen(
         )
     }
 
+    if (editingUsbThermalCurve) {
+        val profile = state.usbThermalControl.profile
+        FanCurveEditorDialog(
+            profileId = profile.id,
+            profileName = stringResource(
+                AuthorizationR.string.authorization_usb_thermal_fan_curve
+            ),
+            points = profile.points,
+            defaultPoints = profile.defaultPoints,
+            currentTempC = thermal.usb?.tempC ?: 0.0,
+            onPointsChanged = vm::setUsbThermalFanCurve,
+            onSetDefault = vm::setUsbThermalFanCurveAsDefault,
+            onReset = vm::resetUsbThermalFanCurve,
+            onRename = null,
+            onDelete = null,
+            onDismiss = { editingUsbThermalCurve = false },
+        )
+    }
+
     editingPresetId?.let { presetId ->
         val preset = state.presetConfig.catalog.preset(presetId) ?: return@let
         PresetEditorDialog(
@@ -1328,8 +1342,8 @@ private fun FanCurveEditorDialog(
     onPointsChanged: (List<FanCurvePoint>) -> Unit,
     onSetDefault: (List<FanCurvePoint>) -> Unit,
     onReset: () -> Unit,
-    onRename: (String) -> Unit,
-    onDelete: () -> Unit,
+    onRename: ((String) -> Unit)?,
+    onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
     val draft = remember(profileId) {
@@ -1363,18 +1377,20 @@ private fun FanCurveEditorDialog(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = { showRenameDialog = true }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_edit_square),
-                            contentDescription = stringResource(R.string.rename_curve),
-                        )
-                    }
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(
-                            Icons.Default.DeleteForever,
-                            contentDescription = stringResource(R.string.delete_curve),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
+                    if (onRename != null && onDelete != null) {
+                        IconButton(onClick = { showRenameDialog = true }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_edit_square),
+                                contentDescription = stringResource(R.string.rename_curve),
+                            )
+                        }
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                Icons.Default.DeleteForever,
+                                contentDescription = stringResource(R.string.delete_curve),
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(10.dp))
@@ -1443,7 +1459,7 @@ private fun FanCurveEditorDialog(
         }
     }
 
-    if (showRenameDialog) {
+    if (showRenameDialog && onRename != null) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
             title = { Text(stringResource(R.string.rename_curve)) },
@@ -1477,7 +1493,7 @@ private fun FanCurveEditorDialog(
         )
     }
 
-    if (showDeleteDialog) {
+    if (showDeleteDialog && onDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text(stringResource(R.string.delete_curve)) },

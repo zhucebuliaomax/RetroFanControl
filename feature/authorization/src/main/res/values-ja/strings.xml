@@ -22,14 +22,15 @@
     <string name="authorization_notifications">通知設定</string>
     <string name="authorization_notifications_enabled">有効</string>
     <string name="authorization_notifications_disabled">無効</string>
-    <string name="authorization_disable_usb_thermal">USB 温度によるファン制御を無効化</string>
+    <string name="authorization_usb_thermal_control">USB 温度制御</string>
+    <string name="authorization_usb_thermal_fan_curve">USB 温度ファンカーブ</string>
     <string name="authorization_caution">注意</string>
     <string name="authorization_data">データ</string>
     <string name="authorization_export_data">すべてのデータをエクスポート</string>
     <string name="authorization_import_data">データをインポート</string>
     <string name="authorization_import_data_summary">データをインポートしてもローカルデータは置き換えられません</string>
     <string name="authorization_reset_data">すべてのデータをリセット</string>
-    <string name="authorization_disable_usb_thermal_footer">標準の USB 温度制御は非常に積極的です。43°C でファンは約半速まで上がり、45°C ではほぼ全速になります。詳細は RP6 カーネル温度制御戦略を確認してください。充電中には、この積極的な回転数上昇が頻繁に発生します。RP6 を分解して確認すると、ファンから USB ポートへ届く気流はほとんどなく、この動作の実用的な効果には疑問があります。\nこのオプションは USB 温度によるファン制御を無効にします。自己責任で使用してください。</string>
+    <string name="authorization_usb_thermal_footer">複数の制御元がファンを競合して操作しないよう、カーネルの USB ファン制御は無効化されます。有効にすると、RetroControl は専用の USB 温度カーブを適用し、現在のアプリカーブと比較して高い方の出力を使用します。デフォルトカーブは標準の 43°C と 45°C のしきい値に従います。詳細は RP6 カーネル温度制御戦略を確認してください。</string>
     <string name="authorization_usb_thermal_strategy">RP6 カーネル温度制御戦略</string>
     <string name="authorization_open_usb_thermal_strategy">RP6 カーネル温度制御戦略を開く</string>
     <string name="authorization_usb_thermal_strategy_url">https://github.com/zhucebuliaomax/RetroFanControl/blob/codex/dev/docs/RP6%20Kernel%20Thermal%20Strategy.md</string>

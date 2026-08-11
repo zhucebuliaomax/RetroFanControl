@@ -53,6 +53,7 @@
     <string name="select_joystick_profile">选择摇杆配置</string>
     <string name="select_performance_profile">选择频率方案</string>
     <string name="select_button_layout">选择按键布局</string>
+    <string name="radio_selection_hint">点击单选按钮进行选择，点击项目进行编辑。</string>
 
     <string name="notification_channel_name">风扇控制</string>
     <string name="notification_channel_description">显示当前曲线、风扇百分比和 CPU/GPU 温度</string>

@@ -28,14 +28,12 @@ object KernelFanThermalController {
     }
 
     /**
-     * CPU/GPU fan trips are suppressed by default so the user curve owns the fan. USB fan trips
-     * follow the Settings switch. Disabling USB fan control also disables its fan-only thermal
-     * zone; CPU/GPU frequency throttling, hotplug, thermal pause, and zone modes remain enabled.
+     * CPU/GPU/USB pwm-fan trips are suppressed so application curves exclusively own the fan.
+     * CPU/GPU frequency throttling, hotplug, thermal pause, and other thermal zones remain intact.
      */
     @Synchronized
     fun apply(
         prefs: SharedPreferences,
-        disableUsbFanControl: Boolean,
         disableThermalProtection: Boolean,
     ): Boolean {
         val trips = discoverFanTrips()
@@ -57,7 +55,7 @@ object KernelFanThermalController {
         val zones = trips.groupBy { it.zonePath }
         val targetModes = zones.mapValues { (_, zoneTrips) ->
             val kind = zoneTrips.first().kind
-            if (kind == ThermalKind.USB && disableUsbFanControl) {
+            if (kind == ThermalKind.USB) {
                 "disabled"
             } else if (
                 disableThermalProtection && kind in setOf(ThermalKind.CPU, ThermalKind.GPU)
@@ -75,11 +73,11 @@ object KernelFanThermalController {
             }
         }
         trips.forEach { trip ->
-            val disabled = when (trip.kind) {
-                ThermalKind.CPU, ThermalKind.GPU -> true
-                ThermalKind.USB -> disableUsbFanControl
-                else -> false
-            }
+            val disabled = trip.kind in setOf(
+                ThermalKind.CPU,
+                ThermalKind.GPU,
+                ThermalKind.USB,
+            )
             val original = prefs.getInt(trip.preferenceKey, trip.currentTemp)
             val target = if (disabled) DISABLED_TRIP_TEMP_MILLIDEGREES else original
             if (!Shell.cmd("echo $target > ${trip.tempPath} 2>/dev/null").exec().isSuccess) {
@@ -103,8 +101,8 @@ object KernelFanThermalController {
         }
         Log.i(
             TAG,
-            "Applied thermal policy: CPU/GPU fan disabled, USB fan disabled=" +
-                "$disableUsbFanControl, protection disabled=$disableThermalProtection",
+            "Applied thermal policy: CPU/GPU/USB fan disabled, " +
+                "protection disabled=$disableThermalProtection",
         )
         return success
     }

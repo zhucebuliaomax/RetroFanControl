@@ -16,8 +16,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FileOpen
-import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
@@ -55,8 +55,8 @@ data class ExportChoice(
 fun ControlTransferFabMenu(
     addLabel: String,
     onAdd: () -> Unit,
-    onImport: () -> Unit,
-    onExport: () -> Unit,
+    onImport: (() -> Unit)? = null,
+    onExport: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -83,22 +83,26 @@ fun ControlTransferFabMenu(
             }
         },
     ) {
-        FloatingActionButtonMenuItem(
-            onClick = {
-                expanded = false
-                onImport()
-            },
-            text = { Text(stringResource(R.string.import_items)) },
-            icon = { Icon(Icons.Default.FileOpen, contentDescription = null) },
-        )
-        FloatingActionButtonMenuItem(
-            onClick = {
-                expanded = false
-                onExport()
-            },
-            text = { Text(stringResource(R.string.export_items)) },
-            icon = { Icon(Icons.Default.SaveAlt, contentDescription = null) },
-        )
+        onImport?.let { importItems ->
+            FloatingActionButtonMenuItem(
+                onClick = {
+                    expanded = false
+                    importItems()
+                },
+                text = { Text(stringResource(R.string.import_items)) },
+                icon = { Icon(Icons.Default.FileDownload, contentDescription = null) },
+            )
+        }
+        onExport?.let { exportItems ->
+            FloatingActionButtonMenuItem(
+                onClick = {
+                    expanded = false
+                    exportItems()
+                },
+                text = { Text(stringResource(R.string.export_items)) },
+                icon = { Icon(Icons.Default.FileUpload, contentDescription = null) },
+            )
+        }
         FloatingActionButtonMenuItem(
             onClick = {
                 expanded = false

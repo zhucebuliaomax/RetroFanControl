@@ -36,6 +36,8 @@ import com.mmax.retrocontrol.data.PerformanceTilePreferences
 import com.mmax.retrocontrol.data.PerformanceProfile
 import com.mmax.retrocontrol.data.PresetPreferences
 import com.mmax.retrocontrol.data.Prefs
+import com.mmax.retrocontrol.data.UsbThermalFanControl
+import com.mmax.retrocontrol.data.UsbThermalFanCurvePreferences
 import com.mmax.retrocontrol.data.JoystickProfile
 import com.mmax.retrocontrol.data.JoystickProfilePreferences
 import com.mmax.retrocontrol.data.JoystickSelectionPreferences
@@ -67,7 +69,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 /**
  * The foreground service owns fan, gamepad, joystick RGB, and CPU frequency-profile writes
@@ -158,6 +159,9 @@ class SystemControlService : Service() {
     private var fanConfig = FanControlConfig()
 
     @Volatile
+    private var usbThermalControl = UsbThermalFanControl()
+
+    @Volatile
     private var frequencyPolicies = emptyList<CpuFrequencyPolicy>()
 
     @Volatile
@@ -234,7 +238,9 @@ class SystemControlService : Service() {
                 loadFanPreferences()
                 FanQuickSettingsTile.requestRefresh(applicationContext)
             }
-            Prefs.USB_THERMAL_DISABLED,
+            Prefs.USB_THERMAL_CONTROL_ENABLED,
+            Prefs.USB_THERMAL_FAN_CURVE,
+            Prefs.USB_THERMAL_FAN_CURVE_DEFAULT -> loadUsbThermalPreferences()
             Prefs.THERMAL_PROTECTION_DISABLED -> applyKernelThermalPreferences()
             Prefs.BUTTON_LAYOUT_PROFILE_CATALOG -> {
                 applyButtonLayout(force = true)
@@ -291,6 +297,7 @@ class SystemControlService : Service() {
         screenReceiverRegistered = true
 
         startOrdinaryForeground()
+        loadUsbThermalPreferences()
         loadJoystickPreferences()
         applyButtonLayout(force = true)
         applyPerformanceProfile(force = true)
@@ -385,6 +392,11 @@ class SystemControlService : Service() {
         configRevision++
     }
 
+    private fun loadUsbThermalPreferences() {
+        usbThermalControl = UsbThermalFanCurvePreferences.load(prefs)
+        configRevision++
+    }
+
     private fun loadJoystickPreferences(force: Boolean = false) {
         val catalog = JoystickProfilePreferences.load(prefs)
         joystickProfile = previewJoystickProfileId?.let(catalog::profile)
@@ -401,12 +413,10 @@ class SystemControlService : Service() {
     }
 
     private fun applyKernelThermalPreferences() {
-        val usbDisabled = prefs.getBoolean(Prefs.USB_THERMAL_DISABLED, false)
         val protectionDisabled = prefs.getBoolean(Prefs.THERMAL_PROTECTION_DISABLED, false)
         scope.launch {
             KernelFanThermalController.apply(
                 prefs = prefs,
-                disableUsbFanControl = usbDisabled,
                 disableThermalProtection = protectionDisabled,
             )
         }
@@ -651,6 +661,7 @@ class SystemControlService : Service() {
         fanJob?.cancel()
         fanJob = scope.launch {
             val response = FanResponseController()
+            val usbResponse = FanResponseController()
             var appliedRevision = Long.MIN_VALUE
             var thermal = ThermalSnapshot()
             var lastThermalReadMs = 0L
@@ -683,14 +694,14 @@ class SystemControlService : Service() {
                 val configChanged = revision != appliedRevision
                 val controlTemp = thermal.controlTempC
 
-                val output = when {
+                val appOutput = when {
                     fanSuspendedForScreenOff || profile == null -> {
                         if (configChanged) {
                             response.resetImmediate(controlTemp, 0.0, now)
                         }
                         0.0
                     }
-                    controlTemp <= 0.0 -> null
+                    controlTemp <= 0.0 -> 0.0
                     configChanged -> {
                         val immediate = curvePercent(profile.points, controlTemp)
                         response.resetImmediate(controlTemp, immediate, now)
@@ -700,33 +711,35 @@ class SystemControlService : Service() {
                     }
                 }
 
+                val usbControl = usbThermalControl
+                val usbTemp = thermal.usb?.tempC ?: 0.0
+                val usbOutput = when {
+                    !usbControl.enabled || usbTemp <= 0.0 -> {
+                        if (configChanged) usbResponse.resetImmediate(usbTemp, 0.0, now)
+                        0.0
+                    }
+                    configChanged -> {
+                        val immediate = curvePercent(usbControl.profile.points, usbTemp)
+                        usbResponse.resetImmediate(usbTemp, immediate, now)
+                    }
+                    else -> usbResponse.update(usbTemp, now) { temp ->
+                        curvePercent(usbControl.profile.points, temp)
+                    }
+                }
+                val output = maxOf(appOutput, usbOutput)
+
                 val profileName = profile?.displayName(this@SystemControlService).orEmpty()
                 val profilePoints = profile?.points.orEmpty()
-                if (output != null) {
-                    val percent = FanController.writePercent(output)
-                    TelemetryRepository.updateThermal(
-                        thermal = thermal,
-                        fanPercent = percent,
-                        fanAdjustEnabled = profile != null &&
-                            !fanSuspendedForScreenOff &&
-                            controlTemp > 0.0,
-                        activeCurveName = profileName,
-                        activeCurvePoints = profilePoints,
-                    )
-                } else {
-                    val maxState = FanController.readMaxState().coerceAtLeast(1)
-                    val percent = (FanController.readCurState().toDouble() / maxState * 100.0)
-                        .roundToInt()
-                    TelemetryRepository.updateThermal(
-                        thermal = thermal,
-                        fanPercent = percent,
-                        fanAdjustEnabled = profile != null &&
-                            !fanSuspendedForScreenOff &&
-                            controlTemp > 0.0,
-                        activeCurveName = profileName,
-                        activeCurvePoints = profilePoints,
-                    )
-                }
+                val percent = FanController.writePercent(output)
+                TelemetryRepository.updateThermal(
+                    thermal = thermal,
+                    fanPercent = percent,
+                    fanAdjustEnabled = profile != null &&
+                        !fanSuspendedForScreenOff &&
+                        controlTemp > 0.0,
+                    activeCurveName = profileName,
+                    activeCurvePoints = profilePoints,
+                )
 
                 if (now - lastNotificationUpdateMs >= 2_000L) {
                     updateNotification()

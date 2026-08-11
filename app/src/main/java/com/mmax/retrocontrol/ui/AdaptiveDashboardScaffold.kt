@@ -776,6 +776,11 @@ private fun AppListPane(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = stringResource(R.string.search_apps),
+                            tint = if (appFilter == AppListFilter.ALL) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
                         )
                     }
                     Box {

@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
@@ -43,7 +44,7 @@ data class AuthorizationUiState(
     val telemetryOverlayEnabled: Boolean,
     val autoStartEnabled: Boolean,
     val profileSwitchToastsEnabled: Boolean,
-    val usbThermalDisabled: Boolean,
+    val usbThermalControlEnabled: Boolean,
     val thermalProtectionDisabled: Boolean,
     val rootGranted: Boolean,
     val overlayPermissionGranted: Boolean,
@@ -61,7 +62,8 @@ fun AuthorizationManagementSection(
     onTelemetryOverlayEnabledChange: (Boolean) -> Unit,
     onAutoStartEnabledChange: (Boolean) -> Unit,
     onProfileSwitchToastsEnabledChange: (Boolean) -> Unit,
-    onUsbThermalDisabledChange: (Boolean) -> Unit,
+    onUsbThermalControlEnabledChange: (Boolean) -> Unit,
+    onUsbThermalFanCurveClick: () -> Unit,
     onThermalProtectionDisabledChange: (Boolean) -> Unit,
     onRefreshRoot: () -> Unit,
     onOpenKernelSu: () -> Unit,
@@ -257,11 +259,14 @@ fun AuthorizationManagementSection(
         modifier = Modifier.padding(bottom = SettingsTokens.sectionTitleBottomPadding),
     )
     SettingsSegmentGroup {
+        val itemCount = if (state.usbThermalControlEnabled) 2 else 1
         SettingsPreferenceRow(
             index = 0,
-            count = 1,
-            title = stringResource(R.string.authorization_disable_usb_thermal),
-            onClick = { onUsbThermalDisabledChange(!state.usbThermalDisabled) },
+            count = itemCount,
+            title = stringResource(R.string.authorization_usb_thermal_control),
+            onClick = {
+                onUsbThermalControlEnabledChange(!state.usbThermalControlEnabled)
+            },
             modifier = usbThermalModifier,
             leadingContent = {
                 Icon(
@@ -272,12 +277,21 @@ fun AuthorizationManagementSection(
             },
             trailingContent = {
                 Switch(
-                    checked = state.usbThermalDisabled,
-                    onCheckedChange = onUsbThermalDisabledChange,
+                    checked = state.usbThermalControlEnabled,
+                    onCheckedChange = onUsbThermalControlEnabledChange,
                     modifier = Modifier.focusProperties { canFocus = false },
                 )
             },
         )
+        if (state.usbThermalControlEnabled) {
+            SettingsPreferenceRow(
+                index = 1,
+                count = itemCount,
+                title = stringResource(R.string.authorization_usb_thermal_fan_curve),
+                onClick = onUsbThermalFanCurveClick,
+                trailingIcon = Icons.Default.ChevronRight,
+            )
+        }
     }
     UsbThermalFooter()
     Spacer(Modifier.height(20.dp))
@@ -327,7 +341,7 @@ fun AuthorizationManagementSection(
 private fun UsbThermalFooter() {
     val strategyUrl = stringResource(R.string.authorization_usb_thermal_strategy_url)
     val strategy = stringResource(R.string.authorization_usb_thermal_strategy)
-    val footer = stringResource(R.string.authorization_disable_usb_thermal_footer)
+    val footer = stringResource(R.string.authorization_usb_thermal_footer)
     val iconId = "open-in-new"
     SettingsStandaloneFooterText(
         text = linkedThermalFooter(footer, strategy, strategyUrl, iconId),

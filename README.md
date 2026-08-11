@@ -53,7 +53,7 @@ Other devices may expose different thermal-zone names or fan-control nodes; read
 
 This tool has only been tested on the **Retroid Pocket 6 running LineageOS**, not Stock OS or other devices. It requires root access to read the relevant sysfs nodes and control the fan.
 
-It reads thermal sensors and writes fan and cpufreq controls through sysfs without altering kernel thermal limits. Incorrect fan curves or CPU frequency limits may affect cooling, stability, battery life, and performance, so use it at your own risk.
+It reads thermal sensors and writes fan and cpufreq controls through sysfs. While its service is active, it suppresses kernel trips bound specifically to the fan so one app-owned control loop can combine the CPU/GPU and USB fan curves; independent thermal throttling and emergency protections remain available. Incorrect fan curves or CPU frequency limits may affect cooling, stability, battery life, and performance, so use it at your own risk.
 
 This project originally started as a fork of [Retroid-Pocket-6-Lineage-OS-Fan-and-RGB-Control](https://github.com/hasan-ege/Retroid-Pocket-6-Lineage-OS-Fan-and-RGB-Control), but after heavy modifications, very little of the original code remains, so I decided to publish it as a standalone repository.
 

@@ -379,7 +379,7 @@ fun PresetEditorDialog(
                 onDismiss = { controlPicker = null },
             )
             "performance" -> ChoiceDialog(
-                title = stringResource(R.string.preset_performance_profile),
+                title = stringResource(R.string.select_performance_profile),
                 choices = performanceChoices.map { AppProfileChoice(it.id, it.name) },
                 selectedId = preset.performanceProfileId,
                 showRadio = true,
@@ -390,7 +390,7 @@ fun PresetEditorDialog(
                 onDismiss = { controlPicker = null },
             )
             else -> ChoiceDialog(
-                title = stringResource(R.string.control_button_layout),
+                title = stringResource(R.string.select_button_layout),
                 choices = buttonLayoutChoices.map { AppProfileChoice(it.id, it.name) },
                 selectedId = preset.buttonLayoutId,
                 showRadio = true,

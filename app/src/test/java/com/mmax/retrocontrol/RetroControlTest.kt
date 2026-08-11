@@ -22,7 +22,7 @@ import com.mmax.retrocontrol.data.FanSelectionPreferences
 import com.mmax.retrocontrol.data.FanSelectionSource
 import com.mmax.retrocontrol.data.PresetPreferences
 import com.mmax.retrocontrol.hardware.FanResponseController
-import com.mmax.retrocontrol.hardware.FanController
+import com.mmax.retrocontrol.data.UsbThermalFanControl
 import com.mmax.retrocontrol.hardware.GamepadController
 import com.mmax.retrocontrol.hardware.ThermalReading
 import com.mmax.retrocontrol.hardware.ThermalSnapshot
@@ -37,29 +37,13 @@ import org.junit.Test
 
 class RetroControlTest {
     @Test
-    fun fanCoolingLevels_decodeDeviceTreeBigEndianCells() {
-        assertEquals(
-            listOf(0, 40, 65, 175),
-            FanController.parseCoolingLevels(
-                listOf(
-                    0, 0, 0, 0,
-                    0, 0, 0, 40,
-                    0, 0, 0, 65,
-                    0, 0, 0, 175,
-                )
-            ),
-        )
-    }
+    fun usbThermalFanCurve_matchesKernelThresholdsByDefault() {
+        val points = UsbThermalFanControl.factoryPoints
 
-    @Test
-    fun fanCurve_onlyOverridesAValidLowerKernelFloor() {
-        val levels = listOf(0, 40, 65, 75, 90, 100, 120, 150, 175)
-
-        assertTrue(FanController.shouldUseFanCurve(121, 6, levels))
-        assertEquals(false, FanController.shouldUseFanCurve(120, 6, levels))
-        assertEquals(false, FanController.shouldUseFanCurve(119, 6, levels))
-        assertTrue(FanController.shouldUseFanCurve(1, 0, levels))
-        assertEquals(false, FanController.shouldUseFanCurve(255, 6, null))
+        assertEquals(0.0, FanCurveSerializer.interpolate(42.9, points), 0.0)
+        assertEquals(47.0, FanCurveSerializer.interpolate(43.0, points), 0.0)
+        assertEquals(58.0, FanCurveSerializer.interpolate(44.0, points), 0.0)
+        assertEquals(69.0, FanCurveSerializer.interpolate(45.0, points), 0.0)
     }
 
     @Test

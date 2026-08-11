@@ -53,6 +53,7 @@
     <string name="select_joystick_profile">Select joystick profile</string>
     <string name="select_performance_profile">Select frequency profile</string>
     <string name="select_button_layout">Select button layout</string>
+    <string name="radio_selection_hint">Select with the radio button, or tap an item to edit it.</string>
 
     <string name="notification_channel_name">Fan control</string>
     <string name="notification_channel_description">Shows the active curve, fan percentage, and CPU/GPU temperatures</string>

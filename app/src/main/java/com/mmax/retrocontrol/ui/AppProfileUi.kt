@@ -179,7 +179,7 @@ fun AppProfileSection(
                 onDismiss = { picker = null },
             )
             AppPicker.PERFORMANCE -> ChoiceDialog(
-                title = stringResource(R.string.control_core),
+                title = stringResource(R.string.select_performance_profile),
                 choices = performanceChoices,
                 selectedId = profile?.performanceProfileId,
                 showRadio = true,
@@ -190,7 +190,7 @@ fun AppProfileSection(
                 onDismiss = { picker = null },
             )
             AppPicker.BUTTON -> ChoiceDialog(
-                title = stringResource(R.string.control_button_layout),
+                title = stringResource(R.string.select_button_layout),
                 choices = buttonLayoutChoices,
                 selectedId = profile?.buttonLayoutId,
                 showRadio = true,
@@ -264,6 +264,11 @@ fun ChoiceDialog(
 ) {
     SettingsListDialog(
         title = title,
+        description = if (showRadio && addLabel != null) {
+            stringResource(R.string.radio_selection_hint)
+        } else {
+            null
+        },
         itemCount = choices.size,
         itemLabel = { index -> choices[index].name },
         selectedIndex = choices.indexOfFirst { it.id == selectedId },
@@ -273,8 +278,7 @@ fun ChoiceDialog(
         onSelected = { index -> onSelected(choices[index].id) },
         onItemClick = { index ->
             val id = choices[index].id
-            if (showRadio) onSelected(id)
-            onItemClick(id)
+            if (showRadio && addLabel == null) onSelected(id) else onItemClick(id)
         },
         onAdd = onAdd,
         emptyLabel = stringResource(R.string.no_options_available),

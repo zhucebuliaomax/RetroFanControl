@@ -373,6 +373,7 @@ fun SettingsSegmentScope.SettingsPreferenceRow(
 @Composable
 fun SettingsListDialog(
     title: String,
+    description: String? = null,
     itemCount: Int,
     itemLabel: (Int) -> String,
     onItemClick: (Int) -> Unit,
@@ -410,6 +411,14 @@ fun SettingsListDialog(
                     text = title,
                     style = MaterialTheme.typography.titleLargeEmphasized,
                 )
+                description?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
                 Spacer(Modifier.height(16.dp))
                 Column(
                     Modifier

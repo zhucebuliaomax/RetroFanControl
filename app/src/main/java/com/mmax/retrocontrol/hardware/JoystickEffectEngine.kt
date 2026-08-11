@@ -19,6 +19,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.mmax.retrocontrol.data.JoystickProfile
 import com.mmax.retrocontrol.feature.joystick.JoystickRgbMode
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -44,11 +45,24 @@ class JoystickEffectEngine(
     private val frame = StringBuilder(768)
 
     fun apply(profile: JoystickProfile?, force: Boolean = false) {
+        val previousProfile = activeSignature
         activeProfile = profile
+        if (
+            projection != null &&
+            previousProfile?.mode == JoystickRgbMode.AMBILIGHT &&
+            profile?.mode == JoystickRgbMode.AMBILIGHT
+        ) {
+            activeSignature = profile
+            if (profile.brightness != previousProfile.brightness) {
+                scope.launch { JoystickRgbController.setBrightness(profile.brightness) }
+            }
+            return
+        }
         if (!force && profile == activeSignature) return
         activeSignature = profile
         stopEffect()
         if (suspended || profile == null || profile.mode == JoystickRgbMode.OFF) {
+            captureRequired = suspended && profile?.mode == JoystickRgbMode.AMBILIGHT
             scope.launch { JoystickRgbController.turnOff() }
             return
         }
@@ -56,6 +70,7 @@ class JoystickEffectEngine(
     }
 
     fun setMediaProjectionIntent(intent: Intent) {
+        captureRequired = false
         projectionIntent = intent
         apply(activeProfile, force = true)
     }
@@ -75,6 +90,7 @@ class JoystickEffectEngine(
 
     fun destroy() {
         stopEffect()
+        captureRequired = false
         JoystickRgbController.turnOff()
     }
 
@@ -89,10 +105,12 @@ class JoystickEffectEngine(
         virtualDisplay = null
         imageReader = null
         projection = null
+        mediaProjectionActive = false
         if (consumedProjectionToken) projectionIntent = null
     }
 
     private fun start(profile: JoystickProfile) {
+        captureRequired = false
         when (profile.mode) {
             JoystickRgbMode.OFF -> scope.launch { JoystickRgbController.turnOff() }
             JoystickRgbMode.STATIC -> effectJob = scope.launch {
@@ -365,6 +383,8 @@ class JoystickEffectEngine(
                     }
                     delay(120L)
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Exception) {
                 Log.e(TAG, "Music effect failed", error)
                 JoystickRgbController.turnOff()
@@ -378,6 +398,7 @@ class JoystickEffectEngine(
     private fun ambilight(profile: JoystickProfile) {
         val token = projectionIntent
         if (token == null) {
+            captureRequired = true
             scope.launch { JoystickRgbController.turnOff() }
             return
         }
@@ -385,6 +406,7 @@ class JoystickEffectEngine(
             try {
                 val manager = context.getSystemService(MediaProjectionManager::class.java)
                 projection = manager.getMediaProjection(Activity.RESULT_OK, token)
+                mediaProjectionActive = true
                 val width = 16
                 val height = 9
                 imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
@@ -446,7 +468,7 @@ class JoystickEffectEngine(
                                 output.first,
                                 output.second,
                                 output.third,
-                                profile.brightness,
+                                activeProfile?.brightness ?: profile.brightness,
                             )
                             previousColors[index] = output
                         }
@@ -455,9 +477,13 @@ class JoystickEffectEngine(
                     JoystickRgbController.execute(frame.toString())
                 }, Handler(Looper.getMainLooper()))
                 while (isActive) delay(1_000L)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Exception) {
                 Log.e(TAG, "Ambilight effect failed", error)
                 projectionIntent = null
+                mediaProjectionActive = false
+                captureRequired = true
             }
         }
     }
@@ -618,6 +644,13 @@ class JoystickEffectEngine(
         private const val AMBILIGHT_FULL_HUE_CONFIDENCE = 0.08f
         private const val AMBILIGHT_MAPPED_MIN_SATURATION = 0.25f
         private const val AMBILIGHT_SATURATION_THRESHOLD = 0.75f
+        @Volatile
+        var mediaProjectionActive = false
+            private set
+
+        @Volatile
+        var captureRequired = false
+            private set
         private data class AmbilightZone(val path: String, val x: Int, val y: Int)
         private val sequentialPaths = listOf(
             "/sys/class/leds/left:stick:0",
