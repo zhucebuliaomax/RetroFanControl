@@ -3,9 +3,15 @@ package com.mmax.retrocontrol.feature.authorization
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -19,8 +25,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.sp
 import com.mmax.retrocontrol.designsystem.SettingsPreferenceRow
 import com.mmax.retrocontrol.designsystem.SettingsSegmentGroup
 import com.mmax.retrocontrol.designsystem.SettingsSectionTitle
@@ -56,6 +68,9 @@ fun AuthorizationManagementSection(
     onOpenAppInfo: () -> Unit,
     onOpenOverlaySettings: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
+    onExportData: () -> Unit,
+    onImportData: () -> Unit,
+    onResetData: () -> Unit,
     modifier: Modifier = Modifier,
     telemetryOverlayModifier: Modifier = Modifier,
     autoStartModifier: Modifier = Modifier,
@@ -67,6 +82,9 @@ fun AuthorizationManagementSection(
     notificationsModifier: Modifier = Modifier,
     usbThermalModifier: Modifier = Modifier,
     thermalProtectionModifier: Modifier = Modifier,
+    exportDataModifier: Modifier = Modifier,
+    importDataModifier: Modifier = Modifier,
+    resetDataModifier: Modifier = Modifier,
 ) {
     SettingsSegmentGroup(modifier) {
         SettingsPreferenceRow(
@@ -201,6 +219,37 @@ fun AuthorizationManagementSection(
     }
     Spacer(Modifier.height(20.dp))
     SettingsSectionTitle(
+        text = stringResource(R.string.authorization_data),
+        modifier = Modifier.padding(bottom = SettingsTokens.sectionTitleBottomPadding),
+    )
+    SettingsSegmentGroup {
+        SettingsPreferenceRow(
+            index = 0,
+            count = 3,
+            title = stringResource(R.string.authorization_export_data),
+            onClick = onExportData,
+            modifier = exportDataModifier,
+            trailingIcon = Icons.Default.FileDownload,
+        )
+        SettingsPreferenceRow(
+            index = 1,
+            count = 3,
+            title = stringResource(R.string.authorization_import_data),
+            onClick = onImportData,
+            modifier = importDataModifier,
+            trailingIcon = Icons.Default.FileUpload,
+        )
+        SettingsPreferenceRow(
+            index = 2,
+            count = 3,
+            title = stringResource(R.string.authorization_reset_data),
+            onClick = onResetData,
+            modifier = resetDataModifier,
+            trailingIcon = Icons.Default.DeleteForever,
+        )
+    }
+    Spacer(Modifier.height(20.dp))
+    SettingsSectionTitle(
         text = stringResource(R.string.authorization_caution),
         modifier = Modifier.padding(bottom = SettingsTokens.sectionTitleBottomPadding),
     )
@@ -227,11 +276,7 @@ fun AuthorizationManagementSection(
             },
         )
     }
-    SettingsStandaloneFooterText(
-        text = emphasizedTemperatures(
-            stringResource(R.string.authorization_disable_usb_thermal_footer)
-        ),
-    )
+    UsbThermalFooter()
     Spacer(Modifier.height(20.dp))
     val dangerContentColor = MaterialTheme.colorScheme.onErrorContainer
     SettingsSectionTitle(
@@ -273,6 +318,62 @@ fun AuthorizationManagementSection(
         ),
         color = MaterialTheme.colorScheme.error,
     )
+}
+
+@Composable
+private fun UsbThermalFooter() {
+    val strategyUrl = stringResource(R.string.authorization_usb_thermal_strategy_url)
+    val strategy = stringResource(R.string.authorization_usb_thermal_strategy)
+    val footer = stringResource(R.string.authorization_disable_usb_thermal_footer)
+    val iconId = "open-in-new"
+    SettingsStandaloneFooterText(
+        text = linkedThermalFooter(footer, strategy, strategyUrl, iconId),
+        inlineContent = mapOf(
+            iconId to InlineTextContent(
+                Placeholder(14.sp, 14.sp, PlaceholderVerticalAlign.Center),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = stringResource(
+                        R.string.authorization_open_usb_thermal_strategy
+                    ),
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        ),
+    )
+}
+
+private fun linkedThermalFooter(
+    text: String,
+    strategy: String,
+    url: String,
+    iconId: String,
+) = buildAnnotatedString {
+    val start = text.indexOf(strategy)
+    if (start < 0) {
+        append(text)
+        return@buildAnnotatedString
+    }
+    append(text.substring(0, start))
+    withLink(LinkAnnotation.Url(url)) {
+        withStyle(SpanStyle(color = androidx.compose.ui.graphics.Color.Unspecified)) {
+            append(strategy.replace(' ', '\u00A0'))
+            appendInlineContent(iconId, "↗")
+        }
+    }
+    append(text.substring(start + strategy.length))
+    listOf("43°C", "45°C").forEach { temperature ->
+        val temperatureStart = text.indexOf(temperature)
+        if (temperatureStart >= 0) {
+            addStyle(
+                SpanStyle(fontWeight = FontWeight.Bold),
+                temperatureStart,
+                temperatureStart + temperature.length,
+            )
+        }
+    }
 }
 
 private fun emphasizedTemperatures(text: String) = buildAnnotatedString {

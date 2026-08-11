@@ -27,12 +27,30 @@ import com.mmax.retrocontrol.hardware.ThermalReading
 import com.mmax.retrocontrol.hardware.ThermalSnapshot
 import com.mmax.retrocontrol.hardware.ThermalKind
 import com.mmax.retrocontrol.hardware.ThermalSensorReader
+import com.mmax.retrocontrol.ui.uniqueImportedName
+import com.mmax.retrocontrol.ui.retainedPreferencesOnReset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RetroControlTest {
+    @Test
+    fun reset_preservesOnlyKernelFanTripBackups() {
+        val retained = retainedPreferencesOnReset(
+            mapOf(
+                "kernel_fan_trip_original_v1_usb_therm_2" to 43_000,
+                "usb_thermal_disabled" to true,
+                "fan_mode" to "normal",
+            )
+        )
+
+        assertEquals(
+            mapOf("kernel_fan_trip_original_v1_usb_therm_2" to 43_000),
+            retained,
+        )
+    }
+
     @Test
     fun fanSelection_directCurveOverridesGlobalPreset() {
         val preset = ControlPreset(
@@ -480,5 +498,13 @@ class RetroControlTest {
             "first",
             ButtonLayoutTilePreferences.nextProfile(catalog, "second")?.id,
         )
+    }
+
+    @Test
+    fun importedNames_getSmallestAvailableNumericSuffix() {
+        val names = mutableSetOf("Profile", "Profile.1")
+
+        assertEquals("Profile.2", uniqueImportedName("Profile", names))
+        assertEquals("Other", uniqueImportedName("Other", names))
     }
 }

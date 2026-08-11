@@ -319,6 +319,10 @@ object ButtonLayoutTilePreferences {
         prefs.edit { putString(Prefs.BUTTON_LAYOUT_TILE_PROFILE, profileId) }
     }
 
+    fun clearSelection(prefs: SharedPreferences) {
+        prefs.edit { remove(Prefs.BUTTON_LAYOUT_TILE_PROFILE) }
+    }
+
     fun selectNext(
         prefs: SharedPreferences,
         catalog: ButtonLayoutProfileCatalog,

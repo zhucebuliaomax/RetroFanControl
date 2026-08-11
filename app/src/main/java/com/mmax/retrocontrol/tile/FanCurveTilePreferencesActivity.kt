@@ -174,6 +174,13 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
                                     )
                                 }
                             } else if (buttonLayoutTile) {
+                                add(
+                                    TileSourceUi(
+                                        name = getString(R.string.follow_system),
+                                        selected = selectedButtonLayoutId == null,
+                                        onClick = ::selectFollowSystemButtonLayout,
+                                    ),
+                                )
                                 buttonLayoutCatalog.profiles.forEach { profile ->
                                     add(
                                         TileSourceUi(
@@ -352,6 +359,17 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
         ButtonLayoutTilePreferences.select(
             getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE),
             profileId,
+        )
+        ButtonLayoutQuickSettingsTile.requestRefresh(this)
+        RootAccessManager.ensureRoot {
+            SystemControlService.startOrUpdate(applicationContext)
+            finish()
+        }
+    }
+
+    private fun selectFollowSystemButtonLayout() {
+        ButtonLayoutTilePreferences.clearSelection(
+            getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE),
         )
         ButtonLayoutQuickSettingsTile.requestRefresh(this)
         RootAccessManager.ensureRoot {

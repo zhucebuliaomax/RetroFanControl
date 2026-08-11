@@ -2,6 +2,7 @@ package com.mmax.retrocontrol.hardware
 
 import android.content.SharedPreferences
 import android.util.Log
+import com.mmax.retrocontrol.data.Prefs
 import com.topjohnwu.superuser.Shell
 
 /** Selectively enables or suppresses kernel thermal trips bound to the pwm-fan. */
@@ -9,7 +10,6 @@ object KernelFanThermalController {
     private const val TAG = "KernelFanThermal"
     private const val THERMAL_BASE = "/sys/class/thermal"
     private const val DISABLED_TRIP_TEMP_MILLIDEGREES = 125_000
-    private const val ORIGINAL_TRIP_PREFIX = "kernel_fan_trip_original_v1_"
 
     private data class FanTrip(
         val zonePath: String,
@@ -20,7 +20,7 @@ object KernelFanThermalController {
     ) {
         val tempPath: String = "$zonePath/trip_point_${tripIndex}_temp"
         val preferenceKey: String = buildString {
-            append(ORIGINAL_TRIP_PREFIX)
+            append(Prefs.KERNEL_FAN_TRIP_ORIGINAL_PREFIX)
             append(zoneType.map { if (it.isLetterOrDigit()) it else '_' }.joinToString(""))
             append('_')
             append(tripIndex)
@@ -54,32 +54,36 @@ object KernelFanThermalController {
         }
         originalEditor.commit()
 
+        var success = true
         trips.groupBy { it.zonePath }.forEach { (zonePath, zoneTrips) ->
             val kind = zoneTrips.first().kind
-            val mode = if (
+            val targetMode = if (
                 disableThermalProtection && kind in setOf(ThermalKind.CPU, ThermalKind.GPU)
             ) {
                 "disabled"
             } else {
                 "enabled"
             }
-            if (!Shell.cmd("echo $mode > $zonePath/mode 2>/dev/null").exec().isSuccess) {
-                Log.w(TAG, "Unable to set ${zoneTrips.first().zoneType} mode to $mode")
-            }
-        }
 
-        var success = true
-        trips.forEach { trip ->
-            val disabled = when (trip.kind) {
-                ThermalKind.CPU, ThermalKind.GPU -> true
-                ThermalKind.USB -> disableUsbFanControl
-                else -> false
-            }
-            val original = prefs.getInt(trip.preferenceKey, trip.currentTemp)
-            val target = if (disabled) DISABLED_TRIP_TEMP_MILLIDEGREES else original
-            if (!Shell.cmd("echo $target > ${trip.tempPath} 2>/dev/null").exec().isSuccess) {
+            // Rebinding the zone clears stale cooling demand before its fan trips change.
+            if (!setZoneMode(zonePath, zoneTrips.first().zoneType, "disabled")) {
                 success = false
-                Log.w(TAG, "Unable to write ${trip.zoneType} fan trip ${trip.tripIndex}")
+            }
+            zoneTrips.forEach { trip ->
+                val disabled = when (trip.kind) {
+                    ThermalKind.CPU, ThermalKind.GPU -> true
+                    ThermalKind.USB -> disableUsbFanControl
+                    else -> false
+                }
+                val original = prefs.getInt(trip.preferenceKey, trip.currentTemp)
+                val target = if (disabled) DISABLED_TRIP_TEMP_MILLIDEGREES else original
+                if (!Shell.cmd("echo $target > ${trip.tempPath} 2>/dev/null").exec().isSuccess) {
+                    success = false
+                    Log.w(TAG, "Unable to write ${trip.zoneType} fan trip ${trip.tripIndex}")
+                }
+            }
+            if (!setZoneMode(zonePath, zoneTrips.first().zoneType, targetMode)) {
+                success = false
             }
         }
         Log.i(
@@ -87,6 +91,12 @@ object KernelFanThermalController {
             "Applied thermal policy: CPU/GPU fan disabled, USB fan disabled=" +
                 "$disableUsbFanControl, protection disabled=$disableThermalProtection",
         )
+        return success
+    }
+
+    private fun setZoneMode(zonePath: String, zoneType: String, mode: String): Boolean {
+        val success = Shell.cmd("echo $mode > $zonePath/mode 2>/dev/null").exec().isSuccess
+        if (!success) Log.w(TAG, "Unable to set $zoneType mode to $mode")
         return success
     }
 

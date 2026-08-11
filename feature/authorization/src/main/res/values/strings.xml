@@ -2,7 +2,7 @@
 <resources>
     <string name="authorization_title">Authorization management</string>
     <string name="authorization_telemetry_overlay">Telemetry overlay</string>
-    <string name="authorization_telemetry_overlay_summary">Tap the data area to show controls for the foreground app’s fan curve and core frequencies</string>
+    <string name="authorization_telemetry_overlay_summary">Tap the data area to switch controls.</string>
     <string name="authorization_telemetry_overlay_permission_missing">Permission not granted</string>
     <string name="authorization_auto_start">Start at boot</string>
     <string name="authorization_auto_start_enabled">Enabled; hardware profiles can resume after restart</string>
@@ -24,7 +24,14 @@
     <string name="authorization_notifications_disabled">Disabled</string>
     <string name="authorization_disable_usb_thermal">Disable USB thermal fan control</string>
     <string name="authorization_caution">Caution</string>
-    <string name="authorization_disable_usb_thermal_footer">The default USB thermal policy is extremely aggressive: at 43°C, it immediately drives the fan to roughly half speed; at 45°C, it runs the fan close to its highest automatic level. As a result, the fan may race while the device is charging. A teardown of the RP6 shows that the fan provides almost no airflow over the USB port, so this behavior is of questionable benefit. This option disables USB thermal fan control. Use at your own risk.</string>
+    <string name="authorization_data">Data</string>
+    <string name="authorization_export_data">Export all data</string>
+    <string name="authorization_import_data">Import data</string>
+    <string name="authorization_reset_data">Reset all data</string>
+    <string name="authorization_disable_usb_thermal_footer">The default USB thermal policy is extremely aggressive: the fan ramps to about half speed at 43°C, and nearly full speed at 45°C. For more details, check RP6 Kernel Thermal Strategy. An aggressive ramp-up often occurs while the device is charging. The teardown of the RP6 shows that the fan provides almost no airflow over the USB port, so this behavior is of questionable benefit.\nThis option disables USB thermal fan control. But use at your own risk.</string>
+    <string name="authorization_usb_thermal_strategy">RP6 Kernel Thermal Strategy</string>
+    <string name="authorization_open_usb_thermal_strategy">Open RP6 Kernel Thermal Strategy</string>
+    <string name="authorization_usb_thermal_strategy_url">https://github.com/zhucebuliaomax/RetroFanControl/blob/codex/dev/docs/RP6%20Kernel%20Thermal%20Strategy.md</string>
     <string name="authorization_dangerous">Dangerous</string>
     <string name="authorization_disable_thermal_protection">Disable thermal protection</string>
     <string name="authorization_disable_thermal_protection_footer">Disabling thermal protection stops CPU/GPU thermal throttling and emergency safeguards. Extreme heat may permanently damage the device. Use at your own risk.</string>

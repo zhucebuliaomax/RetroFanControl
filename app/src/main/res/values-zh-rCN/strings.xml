@@ -49,6 +49,7 @@
     <string name="follow_preset">跟随配置</string>
     <string name="follow_profile">跟随配置</string>
     <string name="follow_default">跟随默认配置</string>
+    <string name="follow_system">跟随系统</string>
     <string name="select_joystick_profile">选择摇杆配置</string>
     <string name="select_performance_profile">选择频率方案</string>
     <string name="select_button_layout">选择按键布局</string>
@@ -72,7 +73,7 @@
     <string name="gpu">GPU</string>
     <string name="ddr_short">DDR</string>
     <string name="battery_short">电池</string>
-    <string name="usb_therm">USB 温度</string>
+    <string name="usb_therm">USB</string>
     <string name="fan_speed">风扇</string>
     <string name="decrease_fan_speed">风扇转速降低 5%</string>
     <string name="increase_fan_speed">风扇转速提高 5%</string>
@@ -112,6 +113,12 @@
     <string name="no_items_to_export">没有可导出的项目</string>
     <string name="items_import_result">已导入 %1$d 个，失败 %2$d 个</string>
     <string name="items_export_result">已导出 %1$d 个，失败 %2$d 个</string>
+    <string name="data_exported">已导出所有数据</string>
+    <string name="data_imported">已导入数据</string>
+    <string name="data_transfer_failed">数据文件无效或文件操作失败</string>
+    <string name="reset_all_data">重置所有数据？</string>
+    <string name="reset_all_data_confirmation">所有自定义控制项、配置和 App 设置都会被删除，并恢复出厂默认项。</string>
+    <string name="data_reset">已重置所有数据</string>
     <string name="control_points">控制点</string>
     <string name="control_point_value">%1$d°C   %2$s</string>
     <string name="add_point">添加控制点</string>

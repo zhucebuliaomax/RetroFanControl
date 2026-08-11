@@ -16,6 +16,7 @@ import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.BuiltInFanCurve
 import com.mmax.retrocontrol.data.ButtonLayoutProfileCatalog
 import com.mmax.retrocontrol.data.ButtonLayoutProfilePreferences
+import com.mmax.retrocontrol.data.ButtonLayoutTilePreferences
 import com.mmax.retrocontrol.data.FaceButtonLayout
 import com.mmax.retrocontrol.data.GamepadButtonMapping
 import com.mmax.retrocontrol.data.GamepadTriggerMode
@@ -26,12 +27,17 @@ import com.mmax.retrocontrol.data.FanCurvePoint
 import com.mmax.retrocontrol.data.FanCurvePreferences
 import com.mmax.retrocontrol.data.FanSelectionConfig
 import com.mmax.retrocontrol.data.FanSelectionPreferences
+import com.mmax.retrocontrol.data.FanSelectionSource
 import com.mmax.retrocontrol.data.PresetPreferences
 import com.mmax.retrocontrol.data.PerformanceProfileConfig
 import com.mmax.retrocontrol.data.PerformanceProfilePreferences
+import com.mmax.retrocontrol.data.PerformanceTilePreferences
 import com.mmax.retrocontrol.data.Prefs
 import com.mmax.retrocontrol.data.JoystickProfileCatalog
 import com.mmax.retrocontrol.data.JoystickProfilePreferences
+import com.mmax.retrocontrol.data.JoystickSelectionPreferences
+import com.mmax.retrocontrol.data.JoystickSelectionSource
+import com.mmax.retrocontrol.data.displayName
 import com.mmax.retrocontrol.feature.joystick.JoystickRgbMode
 import com.mmax.retrocontrol.hardware.TelemetryRepository
 import com.mmax.retrocontrol.hardware.TelemetrySnapshot
@@ -44,6 +50,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 
 data class InstalledAppInfo(
     val label: String,
@@ -708,6 +716,331 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         SystemControlService.startOrUpdate(getApplication())
     }
 
+    fun exportAllData(): String {
+        val state = mutableState.value
+        val context = getApplication<Application>()
+        val items = JSONArray()
+        fun addItem(sourceId: String, json: String) {
+            items.put(JSONObject(json).put("sourceId", sourceId))
+        }
+        state.fanConfig.catalog.profiles.forEach {
+            addItem(it.id, ControlItemJson.encodeFanCurve(it.displayName(context), it))
+        }
+        state.joystickProfiles.profiles.forEach {
+            addItem(it.id, ControlItemJson.encodeJoystick(it))
+        }
+        state.buttonLayoutProfiles.profiles.forEach {
+            addItem(it.id, ControlItemJson.encodeButtonLayout(it))
+        }
+        state.performanceProfiles.profiles.forEach {
+            addItem(it.id, ControlItemJson.encodePerformance(it.displayName(context), it))
+        }
+        state.presetConfig.catalog.presets.forEach {
+            addItem(it.id, ControlItemJson.encodePreset(it))
+        }
+
+        val apps = JSONArray()
+        state.appProfiles.values
+            .filter { profile ->
+                profile.presetId != null || profile.fanCurveId != null ||
+                    profile.joystickId != null || profile.buttonLayoutId != null ||
+                    profile.performanceProfileId != null
+            }
+            .sortedBy(AppControlProfile::packageName)
+            .forEach { profile ->
+                apps.put(
+                    JSONObject()
+                        .put("packageName", profile.packageName)
+                        .put("presetId", profile.presetId ?: JSONObject.NULL)
+                        .put("fanCurveId", profile.fanCurveId ?: JSONObject.NULL)
+                        .put("joystickId", profile.joystickId ?: JSONObject.NULL)
+                        .put("buttonLayoutId", profile.buttonLayoutId ?: JSONObject.NULL)
+                        .put(
+                            "performanceProfileId",
+                            profile.performanceProfileId ?: JSONObject.NULL,
+                        )
+                )
+            }
+
+        val settings = JSONObject()
+        settings.put("gamePresetId", state.presetConfig.selectedPresetId)
+        settings.put("nonGamePresetId", state.presetConfig.selectedNonGamePresetId)
+        (state.fanSelection.source as? FanSelectionSource.DirectCurve)?.let {
+            settings.put("fanCurveId", it.profileId)
+        } ?: settings.put("fanCurveId", JSONObject.NULL)
+        settings.put("fanEnabled", state.fanSelection.enabled)
+        val joystickSelection = JoystickSelectionPreferences.load(prefs, state.joystickProfiles)
+        (joystickSelection.source as? JoystickSelectionSource.DirectProfile)?.let {
+            settings.put("joystickProfileId", it.profileId)
+        } ?: settings.put("joystickProfileId", JSONObject.NULL)
+        settings.put("joystickEnabled", joystickSelection.enabled)
+        settings.put(
+            "buttonLayoutTileId",
+            ButtonLayoutTilePreferences.selectedProfileId(prefs, state.buttonLayoutProfiles)
+                ?: JSONObject.NULL,
+        )
+        settings.put(
+            "performanceTileId",
+            PerformanceTilePreferences.selectedProfileId(prefs, state.performanceProfiles)
+                ?: JSONObject.NULL,
+        )
+        settings.put("overlayEnabled", state.overlayEnabled)
+        settings.put("autoStartEnabled", state.autoStartEnabled)
+        settings.put("profileSwitchToastsEnabled", state.profileSwitchToastsEnabled)
+        settings.put("thermalProtectionDisabled", state.thermalProtectionDisabled)
+        settings.put("overlayX", prefs.getInt(Prefs.OVERLAY_X, 100))
+        settings.put("overlayY", prefs.getInt(Prefs.OVERLAY_Y, 100))
+
+        return JSONObject()
+            .put("format", "retro-control-data")
+            .put("version", 1)
+            .put("items", items)
+            .put("apps", apps)
+            .put("settings", settings)
+            .toString(2)
+    }
+
+    fun importAllData(json: String) {
+        val root = JSONObject(json)
+        require(root.optString("format") == "retro-control-data") { "Unsupported data file" }
+        require(root.optInt("version", -1) == 1) { "Unsupported data version" }
+        val entries = root.getJSONArray("items").let { array ->
+            buildList {
+                repeat(array.length()) { index ->
+                    val value = array.getJSONObject(index)
+                    val sourceId = value.getString("sourceId").takeIf(String::isNotBlank)
+                        ?: error("A data item requires an id")
+                    add(sourceId to ControlItemJson.decode(value.toString()))
+                }
+            }
+        }
+        val apps = root.optJSONArray("apps") ?: JSONArray()
+        val settings = root.optJSONObject("settings") ?: JSONObject()
+        val context = getApplication<Application>()
+        val policies = mutableState.value.performanceProfiles.policies
+        val fanIds = mutableMapOf<String, String>()
+        val joystickIds = mutableMapOf<String, String>()
+        val buttonLayoutIds = mutableMapOf<String, String>()
+        val performanceIds = mutableMapOf<String, String>()
+        val presetIds = mutableMapOf<String, String>()
+
+        val fanNames = mutableState.value.fanConfig.catalog.profiles
+            .mapTo(mutableSetOf()) { it.displayName(context) }
+        entries.forEach { (sourceId, item) ->
+            if (item !is ControlItemJson.Item.FanCurve) return@forEach
+            val config = FanCurvePreferences.addImported(
+                prefs,
+                uniqueImportedName(item.name, fanNames),
+                item.points,
+                item.defaultPoints,
+            )
+            fanIds[sourceId] = requireNotNull(config.catalog.profiles.lastOrNull()).id
+        }
+
+        val joystickNames = JoystickProfilePreferences.load(prefs).profiles
+            .mapTo(mutableSetOf()) { it.name }
+        entries.forEach { (sourceId, item) ->
+            if (item !is ControlItemJson.Item.Joystick) return@forEach
+            val catalog = JoystickProfilePreferences.addImported(
+                prefs,
+                item.value.copy(name = uniqueImportedName(item.name, joystickNames)),
+            )
+            joystickIds[sourceId] = requireNotNull(catalog.profiles.lastOrNull()).id
+        }
+
+        val buttonNames = ButtonLayoutProfilePreferences.load(prefs).profiles
+            .mapTo(mutableSetOf()) { it.name }
+        entries.forEach { (sourceId, item) ->
+            if (item !is ControlItemJson.Item.ButtonLayout) return@forEach
+            val catalog = ButtonLayoutProfilePreferences.addImported(
+                prefs,
+                item.value.copy(name = uniqueImportedName(item.name, buttonNames)),
+            )
+            buttonLayoutIds[sourceId] = requireNotNull(catalog.profiles.lastOrNull()).id
+        }
+
+        val performanceNames = PerformanceProfilePreferences.load(prefs, policies).profiles
+            .mapTo(mutableSetOf()) { it.displayName(context) }
+        entries.forEach { (sourceId, item) ->
+            if (item !is ControlItemJson.Item.Performance) return@forEach
+            val config = PerformanceProfilePreferences.addImported(
+                prefs,
+                policies,
+                uniqueImportedName(item.name, performanceNames),
+                item.maxFrequencies,
+            )
+            performanceIds[sourceId] = requireNotNull(config.profiles.lastOrNull()).id
+        }
+
+        fun mapped(id: String?, ids: Map<String, String>): String? = id?.let(ids::get)
+        val fanIdSet = FanCurvePreferences.load(prefs).catalog.profiles.mapTo(mutableSetOf()) { it.id }
+        val joystickIdSet = JoystickProfilePreferences.load(prefs).profiles
+            .mapTo(mutableSetOf()) { it.id }
+        val buttonIdSet = ButtonLayoutProfilePreferences.load(prefs).profiles
+            .mapTo(mutableSetOf()) { it.id }
+        val performanceIdSet = PerformanceProfilePreferences.load(prefs, policies).profiles
+            .mapTo(mutableSetOf()) { it.id }
+        val presetNames = mutableState.value.presetConfig.catalog.presets
+            .mapTo(mutableSetOf()) { it.name }
+        entries.forEach { (sourceId, item) ->
+            if (item !is ControlItemJson.Item.Preset) return@forEach
+            val imported = item.value.copy(
+                name = uniqueImportedName(item.name, presetNames),
+                fanCurveId = mapped(item.value.fanCurveId, fanIds),
+                joystickId = mapped(item.value.joystickId, joystickIds),
+                buttonLayoutId = mapped(item.value.buttonLayoutId, buttonLayoutIds),
+                performanceProfileId = mapped(
+                    item.value.performanceProfileId,
+                    performanceIds,
+                ),
+            )
+            val config = PresetPreferences.addImported(
+                prefs,
+                imported,
+                fanIdSet,
+                joystickIdSet,
+                performanceIdSet,
+                buttonIdSet,
+            )
+            presetIds[sourceId] = requireNotNull(config.catalog.presets.lastOrNull()).id
+        }
+
+        val presetIdSet = PresetPreferences.load(
+            prefs,
+            fanIdSet,
+            joystickIdSet,
+            performanceIdSet,
+            buttonIdSet,
+        ).catalog.presets.mapTo(mutableSetOf()) { it.id }
+        val installedPackages = mutableState.value.installedApps.mapTo(mutableSetOf()) {
+            it.packageName
+        }
+        repeat(apps.length()) { index ->
+            val app = apps.getJSONObject(index)
+            val packageName = app.optString("packageName")
+            if (packageName !in installedPackages) return@repeat
+            AppProfilePreferences.setPreset(
+                prefs,
+                packageName,
+                mapped(app.nullableString("presetId"), presetIds),
+                presetIdSet,
+                fanIdSet,
+                joystickIdSet,
+                performanceIdSet,
+                buttonIdSet,
+            )
+            AppProfilePreferences.setFanCurve(
+                prefs,
+                packageName,
+                mapped(app.nullableString("fanCurveId"), fanIds),
+                presetIdSet,
+                fanIdSet,
+                joystickIdSet,
+                performanceIdSet,
+                buttonIdSet,
+            )
+            AppProfilePreferences.setJoystickProfile(
+                prefs,
+                packageName,
+                mapped(app.nullableString("joystickId"), joystickIds),
+                presetIdSet,
+                fanIdSet,
+                joystickIdSet,
+                performanceIdSet,
+                buttonIdSet,
+            )
+            AppProfilePreferences.setButtonLayout(
+                prefs,
+                packageName,
+                mapped(app.nullableString("buttonLayoutId"), buttonLayoutIds),
+                presetIdSet,
+                fanIdSet,
+                joystickIdSet,
+                performanceIdSet,
+                buttonIdSet,
+            )
+            AppProfilePreferences.setPerformanceProfile(
+                prefs,
+                packageName,
+                mapped(app.nullableString("performanceProfileId"), performanceIds),
+                presetIdSet,
+                fanIdSet,
+                joystickIdSet,
+                performanceIdSet,
+                buttonIdSet,
+            )
+        }
+
+        mapped(settings.nullableString("gamePresetId"), presetIds)?.let {
+            PresetPreferences.selectDefault(
+                prefs, it, true, fanIdSet, joystickIdSet, performanceIdSet, buttonIdSet,
+            )
+        }
+        mapped(settings.nullableString("nonGamePresetId"), presetIds)?.let {
+            PresetPreferences.selectDefault(
+                prefs, it, false, fanIdSet, joystickIdSet, performanceIdSet, buttonIdSet,
+            )
+        }
+        mapped(settings.nullableString("fanCurveId"), fanIds)?.let {
+            FanSelectionPreferences.selectDirectCurve(prefs, it)
+        } ?: FanSelectionPreferences.selectFollowPreset(prefs)
+        if (settings.optBoolean("fanEnabled", true) !=
+            FanSelectionPreferences.load(prefs, FanCurvePreferences.load(prefs)).enabled
+        ) {
+            FanSelectionPreferences.toggle(prefs)
+        }
+        mapped(settings.nullableString("joystickProfileId"), joystickIds)?.let {
+            JoystickSelectionPreferences.selectDirectProfile(prefs, it)
+        } ?: JoystickSelectionPreferences.selectFollowProfile(prefs)
+        if (settings.optBoolean("joystickEnabled", true) !=
+            JoystickSelectionPreferences.load(
+                prefs,
+                JoystickProfilePreferences.load(prefs),
+            ).enabled
+        ) {
+            JoystickSelectionPreferences.toggle(prefs)
+        }
+        if (settings.has("buttonLayoutTileId")) {
+            mapped(settings.nullableString("buttonLayoutTileId"), buttonLayoutIds)?.let {
+                ButtonLayoutTilePreferences.select(prefs, it)
+            } ?: ButtonLayoutTilePreferences.clearSelection(prefs)
+        }
+        if (settings.has("performanceTileId")) {
+            mapped(settings.nullableString("performanceTileId"), performanceIds)?.let {
+                PerformanceTilePreferences.select(prefs, it)
+            } ?: PerformanceTilePreferences.clearSelection(prefs)
+        }
+        prefs.edit {
+            settings.copyBoolean("overlayEnabled", Prefs.OVERLAY_ENABLED, this)
+            settings.copyBoolean("autoStartEnabled", Prefs.AUTO_START_ENABLED, this)
+            settings.copyBoolean(
+                "profileSwitchToastsEnabled",
+                Prefs.PROFILE_SWITCH_TOASTS_ENABLED,
+                this,
+            )
+            settings.copyBoolean(
+                "thermalProtectionDisabled",
+                Prefs.THERMAL_PROTECTION_DISABLED,
+                this,
+            )
+            if (settings.has("overlayX")) putInt(Prefs.OVERLAY_X, settings.getInt("overlayX"))
+            if (settings.has("overlayY")) putInt(Prefs.OVERLAY_Y, settings.getInt("overlayY"))
+        }
+        loadPreferences()
+        SystemControlService.startOrUpdate(context)
+    }
+
+    fun resetAllData() {
+        val thermalTripBackups = retainedPreferencesOnReset(prefs.all)
+        prefs.edit {
+            clear()
+            thermalTripBackups.forEach { (key, value) -> putInt(key, value as Int) }
+            putBoolean(Prefs.USB_THERMAL_DISABLED, false)
+        }
+        loadPreferences()
+        SystemControlService.startOrUpdate(getApplication())
+    }
+
     fun setOverlayEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(Prefs.OVERLAY_ENABLED, enabled) }
         mutableState.update { it.copy(overlayEnabled = enabled) }
@@ -751,3 +1084,35 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 }
+
+internal fun uniqueImportedName(name: String, usedNames: MutableSet<String>): String {
+    val clean = name.trim().take(40).ifBlank { "Imported" }
+    if (usedNames.none { it.equals(clean, ignoreCase = true) }) {
+        usedNames += clean
+        return clean
+    }
+    var index = 1
+    while (true) {
+        val suffix = ".$index"
+        val candidate = clean.take(40 - suffix.length) + suffix
+        if (usedNames.none { it.equals(candidate, ignoreCase = true) }) {
+            usedNames += candidate
+            return candidate
+        }
+        index++
+    }
+}
+
+private fun JSONObject.nullableString(key: String): String? =
+    if (!has(key) || isNull(key)) null else optString(key).takeIf(String::isNotBlank)
+
+private fun JSONObject.copyBoolean(
+    sourceKey: String,
+    targetKey: String,
+    editor: SharedPreferences.Editor,
+) {
+    if (has(sourceKey)) editor.putBoolean(targetKey, getBoolean(sourceKey))
+}
+
+internal fun retainedPreferencesOnReset(values: Map<String, *>): Map<String, *> =
+    values.filterKeys(Prefs::isKernelFanTripBackup)

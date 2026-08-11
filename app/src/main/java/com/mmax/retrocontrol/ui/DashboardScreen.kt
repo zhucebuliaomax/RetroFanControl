@@ -198,6 +198,42 @@ fun DashboardScreen(
             pendingExportFiles = emptyList()
         }
     }
+    var showResetDataDialog by remember { mutableStateOf(false) }
+    val exportDataLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            val success = runCatching {
+                context.contentResolver.openOutputStream(uri, "wt")
+                    ?.bufferedWriter()
+                    ?.use { it.write(vm.exportAllData()) }
+                    ?: error("Unable to open export file")
+            }.isSuccess
+            Toast.makeText(
+                context,
+                if (success) R.string.data_exported else R.string.data_transfer_failed,
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+    val importDataLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val success = runCatching {
+                val json = context.contentResolver.openInputStream(uri)
+                    ?.bufferedReader()
+                    ?.use { it.readText() }
+                    ?: error("Unable to open import file")
+                vm.importAllData(json)
+            }.isSuccess
+            Toast.makeText(
+                context,
+                if (success) R.string.data_imported else R.string.data_transfer_failed,
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
     var editingProfileId by remember { mutableStateOf<String?>(null) }
     var restoreFanCurveFocusId by remember { mutableStateOf<String?>(null) }
@@ -250,7 +286,7 @@ fun DashboardScreen(
     }
     val addPresetFocusRequester = remember { FocusRequester() }
     val appFocusRequester = remember { FocusRequester() }
-    val authorizationFocusRequesters = remember { List(10) { FocusRequester() } }
+    val authorizationFocusRequesters = remember { List(13) { FocusRequester() } }
     val githubFocusRequester = remember { FocusRequester() }
     val navigationFocusRequesters = remember {
         List(DashboardDestination.entries.size) { FocusRequester() }
@@ -883,6 +919,13 @@ fun DashboardScreen(
                 onOpenAppInfo = { context.openAppInfo() },
                 onOpenOverlaySettings = { context.openOverlaySettings() },
                 onOpenNotificationSettings = { context.openFanNotificationSettings() },
+                onExportData = { exportDataLauncher.launch("RetroControl-data.json") },
+                onImportData = {
+                    importDataLauncher.launch(
+                        arrayOf("application/json", "text/json", "text/plain"),
+                    )
+                },
+                onResetData = { showResetDataDialog = true },
                 autoStartModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[0])
                     .focusProperties {
@@ -948,6 +991,22 @@ fun DashboardScreen(
                         right = FocusRequester.Default
                     },
                 usbThermalModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[11])
+                    .focusProperties {
+                        up = authorizationFocusRequesters[10]
+                        down = authorizationFocusRequesters[12]
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                thermalProtectionModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[12])
+                    .focusProperties {
+                        up = authorizationFocusRequesters[11]
+                        down = githubFocusRequester
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                exportDataModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[8])
                     .focusProperties {
                         up = authorizationFocusRequesters[7]
@@ -955,11 +1014,19 @@ fun DashboardScreen(
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
-                thermalProtectionModifier = Modifier
+                importDataModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[9])
                     .focusProperties {
                         up = authorizationFocusRequesters[8]
-                        down = githubFocusRequester
+                        down = authorizationFocusRequesters[10]
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                resetDataModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[10])
+                    .focusProperties {
+                        up = authorizationFocusRequesters[9]
+                        down = authorizationFocusRequesters[11]
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
@@ -970,7 +1037,7 @@ fun DashboardScreen(
                 linkModifier = Modifier
                     .focusRequester(githubFocusRequester)
                     .focusProperties {
-                        up = authorizationFocusRequesters[9]
+                        up = authorizationFocusRequesters[12]
                         down = FocusRequester.Default
                         left = FocusRequester.Default
                         right = FocusRequester.Default
@@ -978,6 +1045,31 @@ fun DashboardScreen(
             )
         },
     )
+
+    if (showResetDataDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDataDialog = false },
+            title = { Text(stringResource(R.string.reset_all_data)) },
+            text = { Text(stringResource(R.string.reset_all_data_confirmation)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        vm.resetAllData()
+                        showResetDataDialog = false
+                        Toast.makeText(context, R.string.data_reset, Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) { Text(stringResource(R.string.reset)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDataDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
 
     exportListKind?.let { kind ->
         val choices = when (kind) {

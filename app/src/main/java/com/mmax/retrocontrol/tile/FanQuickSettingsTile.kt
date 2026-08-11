@@ -55,7 +55,10 @@ class FanQuickSettingsTile : TileService() {
             config,
         )
         qsTile?.apply {
-            icon = Icon.createWithResource(applicationContext, R.drawable.ic_tile_fan)
+            icon = Icon.createWithResource(
+                applicationContext,
+                if (selection.enabled) R.drawable.ic_tile_fan_on else R.drawable.ic_tile_fan_off,
+            )
             label = getString(R.string.tile_fan_label)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 subtitle = when (val source = selection.source) {

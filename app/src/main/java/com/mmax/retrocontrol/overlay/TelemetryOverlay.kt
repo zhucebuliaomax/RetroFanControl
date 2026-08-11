@@ -155,7 +155,8 @@ class TelemetryOverlay(
  */
 private enum class OverlayDisplayMode {
     DATA_ONLY,
-    DATA_FAN_CURVE;
+    FAN_CONTROL,
+    FREQUENCY_CONTROL;
 
     fun next(): OverlayDisplayMode = entries[(ordinal + 1) % entries.size]
 }
@@ -201,28 +202,26 @@ private fun OverlayContent(
             }
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End,
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.close),
+                    tint = Color(0xFFFFB000),
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clickable(onClick = onClose),
+                )
+            }
             Column(
                 modifier = Modifier.clickable(onClick = ::cycleDisplayMode),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = stringResource(R.string.close),
-                        tint = Color(0xFFFFB000),
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clickable(onClick = onClose),
-                    )
-                }
-                Spacer(Modifier.height(1.dp))
                 OverlayTemperatureGroup(stringResource(R.string.cpu), thermal.cpuSummary)
                 OverlayTemperatureGroup(stringResource(R.string.gpu), thermal.gpuSummary)
-                Spacer(Modifier.height(1.dp))
                 OverlayThermalMetricsGroup(
                     metrics = listOf(
                         stringResource(R.string.ddr_short) to thermal.ddr
@@ -233,12 +232,14 @@ private fun OverlayContent(
                             ?.let { formatTemperature(it.tempC) },
                     ),
                 )
-                OverlayFrequencyGroup(
-                    groups = overlayCoreGroups,
-                    currentFrequenciesKhz = telemetry.frequency.currentFrequenciesKhz,
-                )
+                if (displayMode != OverlayDisplayMode.FAN_CONTROL) {
+                    OverlayFrequencyGroup(
+                        groups = overlayCoreGroups,
+                        currentFrequenciesKhz = telemetry.frequency.currentFrequenciesKhz,
+                    )
+                }
             }
-            if (displayMode == OverlayDisplayMode.DATA_FAN_CURVE) {
+            if (displayMode == OverlayDisplayMode.FAN_CONTROL) {
                 Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -271,7 +272,15 @@ private fun OverlayContent(
                         onClick = { onAdjustFan(5) },
                     )
                 }
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(4.dp))
+                OverlayCurvePreview(
+                    name = telemetry.activeCurveName,
+                    points = telemetry.activeCurvePoints,
+                    currentTempC = thermal.controlTempC,
+                )
+            }
+            if (displayMode == OverlayDisplayMode.FREQUENCY_CONTROL) {
+                Spacer(Modifier.height(4.dp))
                 overlayCoreGroups.forEach { group ->
                     val policy = telemetry.frequency.policies.policyFor(group.cpuIds)
                     OverlayFrequencyControl(
@@ -286,12 +295,6 @@ private fun OverlayContent(
                         },
                     )
                 }
-                Spacer(Modifier.height(4.dp))
-                OverlayCurvePreview(
-                    name = telemetry.activeCurveName,
-                    points = telemetry.activeCurvePoints,
-                    currentTempC = thermal.controlTempC,
-                )
             }
         }
     }
@@ -573,7 +576,7 @@ private fun OverlayFrequencyGroup(
                         append(frequencyKhz?.let(::formatOverlayFrequency) ?: unavailable)
                     }
                 },
-                fontSize = 9.5.sp,
+                fontSize = 10.sp,
                 lineHeight = 11.sp,
                 maxLines = 1,
             )
@@ -584,11 +587,17 @@ private fun OverlayFrequencyGroup(
 @Composable
 private fun OverlayCompactMetric(title: String, value: String) {
     Text(
-        text = "$title: $value",
-        color = Color.White,
-        fontSize = 9.sp,
-        lineHeight = 10.sp,
-        fontWeight = FontWeight.SemiBold,
+        text = buildAnnotatedString {
+            withStyle(SpanStyle(color = Color(0xFFFFB000), fontWeight = FontWeight.Bold)) {
+                append("$title: ")
+            }
+            withStyle(SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)) {
+                append(value)
+            }
+        },
+        fontSize = 10.sp,
+        lineHeight = 11.sp,
+        maxLines = 1,
     )
 }
 

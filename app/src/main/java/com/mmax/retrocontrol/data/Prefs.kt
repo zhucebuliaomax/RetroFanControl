@@ -2,6 +2,7 @@ package com.mmax.retrocontrol.data
 
 object Prefs {
     const val FILE = "retro_control"
+    const val KERNEL_FAN_TRIP_ORIGINAL_PREFIX = "kernel_fan_trip_original_v1_"
 
     /** "OFF" or an active profile id. Kept under the legacy key for migration compatibility. */
     const val FAN_MODE = "fan_mode"
@@ -43,4 +44,7 @@ object Prefs {
     const val THERMAL_PROTECTION_DISABLED = "thermal_protection_disabled"
     const val ROOT_NOTICE_ACKNOWLEDGED = "root_notice_acknowledged"
     const val FIRST_LAUNCH_ACCESS_SHOWN = "first_launch_access_shown"
+
+    fun isKernelFanTripBackup(key: String): Boolean =
+        key.startsWith(KERNEL_FAN_TRIP_ORIGINAL_PREFIX)
 }

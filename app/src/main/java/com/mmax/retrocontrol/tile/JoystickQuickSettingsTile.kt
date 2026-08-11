@@ -74,7 +74,14 @@ class JoystickQuickSettingsTile : TileService() {
         val catalog = JoystickProfilePreferences.load(prefs)
         val selection = JoystickSelectionPreferences.load(prefs, catalog)
         qsTile?.apply {
-            icon = Icon.createWithResource(applicationContext, R.drawable.ic_tile_joystick)
+            icon = Icon.createWithResource(
+                applicationContext,
+                if (selection.enabled) {
+                    R.drawable.ic_tile_joystick_on
+                } else {
+                    R.drawable.ic_tile_joystick_off
+                },
+            )
             label = getString(R.string.tile_joystick_label)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 subtitle = when (val source = selection.source) {

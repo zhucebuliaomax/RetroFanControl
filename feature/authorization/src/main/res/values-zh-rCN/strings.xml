@@ -2,7 +2,7 @@
 <resources>
     <string name="authorization_title">授权管理</string>
     <string name="authorization_telemetry_overlay">温度浮窗</string>
-    <string name="authorization_telemetry_overlay_summary">点击数据区域可切换控制，为前台应用调节风扇曲线与核心频率</string>
+    <string name="authorization_telemetry_overlay_summary">点击数据区域可切换控制</string>
     <string name="authorization_telemetry_overlay_permission_missing">未获取权限</string>
     <string name="authorization_auto_start">开机启动</string>
     <string name="authorization_auto_start_enabled">已开启，重启后可自动恢复硬件方案</string>
@@ -24,7 +24,14 @@
     <string name="authorization_notifications_disabled">已关闭</string>
     <string name="authorization_disable_usb_thermal">关闭 USB 温控</string>
     <string name="authorization_caution">注意</string>
-    <string name="authorization_disable_usb_thermal_footer">默认的 USB 温控策略非常激进：达到 43°C 时会立即让风扇以约半速运转，达到 45°C 时则会接近内核自动控制的最高档，因此设备充电时风扇可能狂转。拆解 RP6 后可以发现，风扇几乎无法为 USB 接口提供有效气流，所以这种策略的实际收益存疑。此选项可以关闭 USB 温控风扇控制，请自行承担风险。</string>
+    <string name="authorization_data">数据</string>
+    <string name="authorization_export_data">导出所有数据</string>
+    <string name="authorization_import_data">导入数据</string>
+    <string name="authorization_reset_data">重置所有数据</string>
+    <string name="authorization_disable_usb_thermal_footer">默认的 USB 温控策略非常激进：达到 43°C 时风扇会升至约半速，达到 45°C 时则会接近全速。更多详情请查看 RP6 内核温控策略。设备充电时经常会触发这种激进的升速策略。拆解 RP6 后可以发现，风扇几乎无法为 USB 接口提供有效气流，所以这种行为的实际收益存疑。\n此选项会关闭 USB 温控风扇控制，请自行承担风险。</string>
+    <string name="authorization_usb_thermal_strategy">RP6 内核温控策略</string>
+    <string name="authorization_open_usb_thermal_strategy">打开 RP6 内核温控策略</string>
+    <string name="authorization_usb_thermal_strategy_url">https://github.com/zhucebuliaomax/RetroFanControl/blob/codex/dev/docs/RP6%20Kernel%20Thermal%20Strategy.md</string>
     <string name="authorization_dangerous">危险</string>
     <string name="authorization_disable_thermal_protection">关闭温控保护</string>
     <string name="authorization_disable_thermal_protection_footer">关闭温控保护会停止 CPU/GPU 过热降频和紧急保护。极端高温可能永久损坏设备，请自行承担风险。</string>

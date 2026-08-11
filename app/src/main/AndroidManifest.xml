@@ -106,7 +106,7 @@
         <service
             android:name=".tile.FanQuickSettingsTile"
             android:exported="true"
-            android:icon="@drawable/ic_tile_fan"
+            android:icon="@drawable/ic_tile_fan_off"
             android:label="@string/tile_fan_label"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
@@ -140,7 +140,7 @@
         <service
             android:name=".tile.JoystickQuickSettingsTile"
             android:exported="true"
-            android:icon="@drawable/ic_tile_joystick"
+            android:icon="@drawable/ic_tile_joystick_off"
             android:label="@string/tile_joystick_label"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
@@ -171,7 +171,7 @@
         <service
             android:name=".tile.ButtonLayoutQuickSettingsTile"
             android:exported="true"
-            android:icon="@drawable/ic_tile_button_layout"
+            android:icon="@drawable/ic_tile_button_layout_nintendo"
             android:label="@string/tile_button_layout_label"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>

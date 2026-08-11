@@ -49,6 +49,7 @@
     <string name="follow_preset">Follow profile</string>
     <string name="follow_profile">Follow profile</string>
     <string name="follow_default">Follow default</string>
+    <string name="follow_system">Follow system</string>
     <string name="select_joystick_profile">Select joystick profile</string>
     <string name="select_performance_profile">Select frequency profile</string>
     <string name="select_button_layout">Select button layout</string>
@@ -72,7 +73,7 @@
     <string name="gpu">GPU</string>
     <string name="ddr_short">DDR</string>
     <string name="battery_short">BAT</string>
-    <string name="usb_therm">USB Therm</string>
+    <string name="usb_therm">USB</string>
     <string name="fan_speed">Fan</string>
     <string name="decrease_fan_speed">Decrease fan speed by 5 percent</string>
     <string name="increase_fan_speed">Increase fan speed by 5 percent</string>
@@ -112,6 +113,12 @@
     <string name="no_items_to_export">No items to export</string>
     <string name="items_import_result">Imported %1$d; failed %2$d</string>
     <string name="items_export_result">Exported %1$d; failed %2$d</string>
+    <string name="data_exported">All data exported</string>
+    <string name="data_imported">Data imported</string>
+    <string name="data_transfer_failed">Invalid data file or file operation failed</string>
+    <string name="reset_all_data">Reset all data?</string>
+    <string name="reset_all_data_confirmation">Custom controls, profiles, and app settings will be deleted. Factory defaults will be restored.</string>
+    <string name="data_reset">All data reset</string>
     <string name="control_points">Control points</string>
     <string name="control_point_value">%1$d°C   %2$s</string>
     <string name="add_point">Add point</string>

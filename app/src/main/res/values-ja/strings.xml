@@ -22,6 +22,7 @@
     <string name="non_game_profile">非ゲームプロファイル</string>
     <string name="follow_profile">プロファイルに従う</string>
     <string name="follow_default">デフォルトに従う</string>
+    <string name="follow_system">システムに従う</string>
     <string name="select_joystick_profile">ジョイスティックプロファイルを選択</string>
     <string name="select_performance_profile">周波数プロファイルを選択</string>
     <string name="select_button_layout">ボタンレイアウトを選択</string>
@@ -74,7 +75,7 @@
     <string name="gpu">GPU</string>
     <string name="ddr_short">DDR</string>
     <string name="battery_short">BAT</string>
-    <string name="usb_therm">USB 温度</string>
+    <string name="usb_therm">USB</string>
     <string name="fan_speed">ファン</string>
     <string name="decrease_fan_speed">ファン速度を 5% 下げる</string>
     <string name="increase_fan_speed">ファン速度を 5% 上げる</string>
@@ -114,6 +115,12 @@
     <string name="no_items_to_export">エクスポートできる項目がありません</string>
     <string name="items_import_result">%1$d 件をインポート、%2$d 件失敗</string>
     <string name="items_export_result">%1$d 件をエクスポート、%2$d 件失敗</string>
+    <string name="data_exported">すべてのデータをエクスポートしました</string>
+    <string name="data_imported">データをインポートしました</string>
+    <string name="data_transfer_failed">データファイルが無効か、ファイル操作に失敗しました</string>
+    <string name="reset_all_data">すべてのデータをリセットしますか？</string>
+    <string name="reset_all_data_confirmation">カスタムコントロール、プロファイル、アプリ設定を削除し、工場出荷時のデフォルトを復元します。</string>
+    <string name="data_reset">すべてのデータをリセットしました</string>
     <string name="control_points">制御ポイント</string>
     <string name="control_point_value">%1$d°C   %2$s</string>
     <string name="add_point">ポイントを追加</string>

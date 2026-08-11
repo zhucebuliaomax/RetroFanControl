@@ -57,6 +57,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -133,6 +134,7 @@ fun SettingsStandaloneFooterText(
     text: AnnotatedString,
     modifier: Modifier = Modifier,
     color: Color? = null,
+    inlineContent: Map<String, InlineTextContent> = mapOf(),
 ) {
     Text(
         text = text,
@@ -143,6 +145,7 @@ fun SettingsStandaloneFooterText(
         ),
         color = color ?: MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.bodySmall,
+        inlineContent = inlineContent,
     )
 }
 

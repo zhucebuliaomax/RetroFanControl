@@ -2,7 +2,7 @@
 <resources>
     <string name="authorization_title">権限管理</string>
     <string name="authorization_telemetry_overlay">テレメトリーオーバーレイ</string>
-    <string name="authorization_telemetry_overlay_summary">データ領域をタップすると、フォアグラウンドアプリのファンカーブとコア周波数を調整できます</string>
+    <string name="authorization_telemetry_overlay_summary">データ領域をタップしてコントロールを切り替えます</string>
     <string name="authorization_telemetry_overlay_permission_missing">権限がありません</string>
     <string name="authorization_auto_start">起動時に開始</string>
     <string name="authorization_auto_start_enabled">有効、再起動後にハードウェアプロファイルを自動的に再開できます</string>
@@ -24,7 +24,14 @@
     <string name="authorization_notifications_disabled">無効</string>
     <string name="authorization_disable_usb_thermal">USB 温度によるファン制御を無効化</string>
     <string name="authorization_caution">注意</string>
-    <string name="authorization_disable_usb_thermal_footer">標準の USB 温度制御は非常に積極的です。43°C に達するとファンが直ちに約半速で回転し、45°C ではカーネル自動制御の最高レベル近くまで上がるため、充電中にファンが激しく回転することがあります。RP6 を分解して確認すると、ファンから USB ポートへ届く気流はほとんどなく、この動作の実用的な効果には疑問があります。このオプションは USB 温度によるファン制御を無効にします。自己責任で使用してください。</string>
+    <string name="authorization_data">データ</string>
+    <string name="authorization_export_data">すべてのデータをエクスポート</string>
+    <string name="authorization_import_data">データをインポート</string>
+    <string name="authorization_reset_data">すべてのデータをリセット</string>
+    <string name="authorization_disable_usb_thermal_footer">標準の USB 温度制御は非常に積極的です。43°C でファンは約半速まで上がり、45°C ではほぼ全速になります。詳細は RP6 カーネル温度制御戦略を確認してください。充電中には、この積極的な回転数上昇が頻繁に発生します。RP6 を分解して確認すると、ファンから USB ポートへ届く気流はほとんどなく、この動作の実用的な効果には疑問があります。\nこのオプションは USB 温度によるファン制御を無効にします。自己責任で使用してください。</string>
+    <string name="authorization_usb_thermal_strategy">RP6 カーネル温度制御戦略</string>
+    <string name="authorization_open_usb_thermal_strategy">RP6 カーネル温度制御戦略を開く</string>
+    <string name="authorization_usb_thermal_strategy_url">https://github.com/zhucebuliaomax/RetroFanControl/blob/codex/dev/docs/RP6%20Kernel%20Thermal%20Strategy.md</string>
     <string name="authorization_dangerous">危険</string>
     <string name="authorization_disable_thermal_protection">温度保護を無効化</string>
     <string name="authorization_disable_thermal_protection_footer">温度保護を無効にすると、CPU/GPU のサーマルスロットリングと緊急保護が停止します。過度な高温によりデバイスが恒久的に損傷する可能性があります。自己責任で使用してください。</string>
