@@ -11,37 +11,57 @@ import com.mmax.retrocontrol.data.PresetPreferences
 import com.mmax.retrocontrol.data.Prefs
 import com.mmax.retrocontrol.hardware.CpuFrequencyController
 
-/** Saves a Quick Settings change into the custom controls of the app under the shade. */
+/** Saves a tile change to the current game, or to the shared preset for other apps. */
 internal object CurrentAppControls {
     fun setFan(context: Context, prefs: SharedPreferences, profileId: String?) =
         withCatalogs(context, prefs) { packageName, catalogs ->
-            AppProfilePreferences.setFanCurve(
-                prefs, packageName, profileId, catalogs.presetIds, catalogs.fanIds,
+            if (AppProfilePreferences.isGame(context, packageName)) {
+                AppProfilePreferences.setFanCurve(
+                    prefs, packageName, profileId, catalogs.presetIds, catalogs.fanIds,
+                    catalogs.joystickIds, catalogs.performanceIds, catalogs.buttonIds,
+                )
+            } else PresetPreferences.setFanCurve(
+                prefs, catalogs.nonGamePresetId, profileId, catalogs.fanIds,
                 catalogs.joystickIds, catalogs.performanceIds, catalogs.buttonIds,
             )
         }
 
     fun setJoystick(context: Context, prefs: SharedPreferences, profileId: String?) =
         withCatalogs(context, prefs) { packageName, catalogs ->
-            AppProfilePreferences.setJoystickProfile(
-                prefs, packageName, profileId, catalogs.presetIds, catalogs.fanIds,
+            if (AppProfilePreferences.isGame(context, packageName)) {
+                AppProfilePreferences.setJoystickProfile(
+                    prefs, packageName, profileId, catalogs.presetIds, catalogs.fanIds,
+                    catalogs.joystickIds, catalogs.performanceIds, catalogs.buttonIds,
+                )
+            } else PresetPreferences.setJoystickProfile(
+                prefs, catalogs.nonGamePresetId, profileId, catalogs.fanIds,
                 catalogs.joystickIds, catalogs.performanceIds, catalogs.buttonIds,
             )
         }
 
     fun setButtonLayout(context: Context, prefs: SharedPreferences, profileId: String?) =
         withCatalogs(context, prefs) { packageName, catalogs ->
-            AppProfilePreferences.setButtonLayout(
-                prefs, packageName, profileId, catalogs.presetIds, catalogs.fanIds,
+            if (AppProfilePreferences.isGame(context, packageName)) {
+                AppProfilePreferences.setButtonLayout(
+                    prefs, packageName, profileId, catalogs.presetIds, catalogs.fanIds,
+                    catalogs.joystickIds, catalogs.performanceIds, catalogs.buttonIds,
+                )
+            } else PresetPreferences.setButtonLayout(
+                prefs, catalogs.nonGamePresetId, profileId, catalogs.fanIds,
                 catalogs.joystickIds, catalogs.performanceIds, catalogs.buttonIds,
             )
         }
 
     fun setPerformance(context: Context, prefs: SharedPreferences, profileId: String?) =
         withCatalogs(context, prefs) { packageName, catalogs ->
-            AppProfilePreferences.setPerformanceProfile(
-                prefs, packageName, profileId, catalogs.presetIds, catalogs.fanIds,
-                catalogs.joystickIds, requireNotNull(catalogs.performanceIds), catalogs.buttonIds,
+            if (AppProfilePreferences.isGame(context, packageName)) {
+                AppProfilePreferences.setPerformanceProfile(
+                    prefs, packageName, profileId, catalogs.presetIds, catalogs.fanIds,
+                    catalogs.joystickIds, catalogs.performanceIds, catalogs.buttonIds,
+                )
+            } else PresetPreferences.setPerformanceProfile(
+                prefs, catalogs.nonGamePresetId, profileId, catalogs.fanIds,
+                catalogs.joystickIds, catalogs.performanceIds, catalogs.buttonIds,
             )
         }
 
@@ -61,14 +81,22 @@ internal object CurrentAppControls {
         val performanceIds = PerformanceProfilePreferences.load(
             prefs, CpuFrequencyController.detectPolicies(),
         ).profiles.mapTo(mutableSetOf()) { it.id }
-        val presetIds = PresetPreferences.load(
+        val presetConfig = PresetPreferences.load(
             prefs, fanIds, joystickIds, performanceIds, buttonIds,
-        ).catalog.presets.mapTo(mutableSetOf()) { it.id }
-        block(packageName, Catalogs(presetIds, fanIds, joystickIds, performanceIds, buttonIds))
+        )
+        val presetIds = presetConfig.catalog.presets.mapTo(mutableSetOf()) { it.id }
+        block(
+            packageName,
+            Catalogs(
+                presetIds, presetConfig.selectedNonGamePresetId, fanIds, joystickIds,
+                performanceIds, buttonIds,
+            ),
+        )
     }
 
     private data class Catalogs(
         val presetIds: Set<String>,
+        val nonGamePresetId: String,
         val fanIds: Set<String>,
         val joystickIds: Set<String>,
         val performanceIds: Set<String>,

@@ -380,6 +380,7 @@ fun SettingsListDialog(
     modifier: Modifier = Modifier,
     selectedIndex: Int = -1,
     showRadio: Boolean = false,
+    itemEnabled: (Int) -> Boolean = { true },
     addLabel: String? = null,
     onSelected: (Int) -> Unit = {},
     onAdd: () -> Unit = {},
@@ -425,14 +426,17 @@ fun SettingsListDialog(
                     }
                     val actionCount = itemCount + if (addLabel != null) 1 else 0
                     repeat(itemCount) { index ->
+                        val enabled = itemEnabled(index)
                         SegmentedListItem(
                             onClick = { onItemClick(index) },
+                            enabled = enabled,
                             shapes = ListItemDefaults.segmentedShapes(index, actionCount),
                             leadingContent = if (showRadio) {
                                 {
                                     RadioButton(
                                         selected = index == selectedIndex,
-                                        onClick = { onSelected(index) },
+                                        onClick = { if (enabled) onSelected(index) },
+                                        enabled = enabled,
                                         modifier = Modifier.focusProperties { canFocus = false },
                                     )
                                 }

@@ -15,7 +15,7 @@
     <string name="control_back">Back to control modules</string>
     <string name="app_default_preset">Default profile</string>
     <string name="game_profile">Game profile</string>
-    <string name="non_game_profile">Non-game profile</string>
+    <string name="non_game_profile">Other apps profile</string>
     <string name="app_profile">Profile</string>
     <string name="app_profile_preset">Profile</string>
     <string name="search_apps">Search apps</string>

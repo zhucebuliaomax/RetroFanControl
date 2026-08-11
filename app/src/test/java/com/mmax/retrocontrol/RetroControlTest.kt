@@ -22,6 +22,7 @@ import com.mmax.retrocontrol.data.FanSelectionPreferences
 import com.mmax.retrocontrol.data.FanSelectionSource
 import com.mmax.retrocontrol.data.PresetPreferences
 import com.mmax.retrocontrol.hardware.FanResponseController
+import com.mmax.retrocontrol.hardware.FanController
 import com.mmax.retrocontrol.hardware.GamepadController
 import com.mmax.retrocontrol.hardware.ThermalReading
 import com.mmax.retrocontrol.hardware.ThermalSnapshot
@@ -35,6 +36,32 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RetroControlTest {
+    @Test
+    fun fanCoolingLevels_decodeDeviceTreeBigEndianCells() {
+        assertEquals(
+            listOf(0, 40, 65, 175),
+            FanController.parseCoolingLevels(
+                listOf(
+                    0, 0, 0, 0,
+                    0, 0, 0, 40,
+                    0, 0, 0, 65,
+                    0, 0, 0, 175,
+                )
+            ),
+        )
+    }
+
+    @Test
+    fun fanCurve_onlyOverridesAValidLowerKernelFloor() {
+        val levels = listOf(0, 40, 65, 75, 90, 100, 120, 150, 175)
+
+        assertTrue(FanController.shouldUseFanCurve(121, 6, levels))
+        assertEquals(false, FanController.shouldUseFanCurve(120, 6, levels))
+        assertEquals(false, FanController.shouldUseFanCurve(119, 6, levels))
+        assertTrue(FanController.shouldUseFanCurve(1, 0, levels))
+        assertEquals(false, FanController.shouldUseFanCurve(255, 6, null))
+    }
+
     @Test
     fun reset_preservesOnlyKernelFanTripBackups() {
         val retained = retainedPreferencesOnReset(
@@ -156,6 +183,18 @@ class RetroControlTest {
         val catalog = ControlPresetCatalog(listOf(default, custom)).remove(custom.id)
 
         assertEquals(listOf(default), catalog.presets)
+    }
+
+    @Test
+    fun presetCatalog_startsWithSeparateGameAndOtherAppsProfiles() {
+        val config = ControlPresetConfig()
+
+        assertEquals(
+            listOf("Games", "Other apps"),
+            config.catalog.presets.map { it.name },
+        )
+        assertEquals(ControlPresetCatalog.DEFAULT_ID, config.selectedPresetId)
+        assertEquals(ControlPresetCatalog.OTHER_APPS_ID, config.selectedNonGamePresetId)
     }
 
     @Test

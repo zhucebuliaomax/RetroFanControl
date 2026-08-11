@@ -20,7 +20,7 @@ data class ControlPreset(
 }
 
 data class ControlPresetCatalog(
-    val presets: List<ControlPreset> = listOf(defaultPreset()),
+    val presets: List<ControlPreset> = factoryPresets(),
 ) {
     fun preset(id: String?): ControlPreset? = presets.firstOrNull { it.id == id }
 
@@ -38,10 +38,26 @@ data class ControlPresetCatalog(
 
     companion object {
         const val DEFAULT_ID = "default"
+        const val OTHER_APPS_ID = "other-apps"
+
+        val factoryIds: Set<String> = setOf(DEFAULT_ID, OTHER_APPS_ID)
+
+        fun factoryPresets(): List<ControlPreset> = listOf(
+            defaultPreset(),
+            otherAppsPreset(),
+        )
 
         fun defaultPreset(): ControlPreset = ControlPreset(
             id = DEFAULT_ID,
-            name = "default",
+            name = "Games",
+            isDefault = true,
+            fanCurveId = BuiltInFanCurve.NORMAL.id,
+            buttonLayoutId = ButtonLayoutProfileCatalog.NINTENDO_ID,
+        )
+
+        fun otherAppsPreset(): ControlPreset = ControlPreset(
+            id = OTHER_APPS_ID,
+            name = "Other apps",
             isDefault = true,
             fanCurveId = BuiltInFanCurve.NORMAL.id,
             buttonLayoutId = ButtonLayoutProfileCatalog.NINTENDO_ID,
@@ -53,7 +69,7 @@ data class ControlPresetConfig(
     val catalog: ControlPresetCatalog = ControlPresetCatalog(),
     /** Default profile for games. Kept under the legacy property name for migration. */
     val selectedPresetId: String = ControlPresetCatalog.DEFAULT_ID,
-    val selectedNonGamePresetId: String = ControlPresetCatalog.DEFAULT_ID,
+    val selectedNonGamePresetId: String = ControlPresetCatalog.OTHER_APPS_ID,
 ) {
     val selectedPreset: ControlPreset
         get() = catalog.preset(selectedPresetId)

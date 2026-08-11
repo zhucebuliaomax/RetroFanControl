@@ -17,6 +17,10 @@ object FanController {
     private var cachedMaxState: Int? = null
     @Volatile
     private var cachedPwmPath: String? = null
+    @Volatile
+    private var cachedCoolingLevels: List<Int>? = null
+    @Volatile
+    private var coolingLevelsDiscoveryAttempted = false
 
     @Volatile
     private var thermalOverrideActive = false
@@ -97,11 +101,13 @@ object FanController {
         val pwmPath = discoverPwmPath()
         if (pwmPath != null) {
             val thermalState = readCurState()
-            if (thermalState > 0) {
+            val pwm = (percent / 100.0 * PWM_MAX).roundToInt()
+            val coolingLevels = discoverCoolingLevels()
+            if (!shouldUseFanCurve(pwm, thermalState, coolingLevels)) {
                 if (!thermalOverrideActive) {
                     Log.i(
                         TAG,
-                        "Kernel thermal cooling is active at state $thermalState; " +
+                        "Kernel thermal cooling requires state $thermalState; " +
                             "leaving PWM under thermal control",
                     )
                     thermalOverrideActive = true
@@ -109,10 +115,16 @@ object FanController {
                 return readPwmPercent(pwmPath)
             }
             if (thermalOverrideActive) {
-                Log.i(TAG, "Kernel thermal cooling released; resuming fan-curve PWM control")
+                Log.i(
+                    TAG,
+                    if (thermalState == 0) {
+                        "Kernel thermal cooling released; resuming fan-curve PWM control"
+                    } else {
+                        "Fan curve exceeds the kernel floor; resuming PWM control"
+                    },
+                )
                 thermalOverrideActive = false
             }
-            val pwm = (percent / 100.0 * PWM_MAX).roundToInt()
             if (Shell.cmd("echo $pwm > $pwmPath 2>/dev/null").exec().isSuccess) {
                 return percent
             }
@@ -122,6 +134,28 @@ object FanController {
         val state = (percent / 100.0 * maxState).roundToInt()
         writeState(state)
         return percent
+    }
+
+    private fun discoverCoolingLevels(): List<Int>? {
+        cachedCoolingLevels?.let { return it }
+        if (coolingLevelsDiscoveryAttempted) return null
+        synchronized(this) {
+            cachedCoolingLevels?.let { return it }
+            if (coolingLevelsDiscoveryAttempted) return null
+            coolingLevelsDiscoveryAttempted = true
+            val script = buildString {
+                append("for f in \$(find /sys/firmware/devicetree/base -name cooling-levels ")
+                append("2>/dev/null); do case \"\$f\" in *pwm-fan*) ")
+                append("od -An -tu1 \"\$f\" 2>/dev/null; break;; esac; done")
+            }
+            val bytes = Shell.cmd(script).exec().out
+                .flatMap { line -> line.trim().split(Regex("\\s+")) }
+                .mapNotNull(String::toIntOrNull)
+            return parseCoolingLevels(bytes)?.also { levels ->
+                cachedCoolingLevels = levels
+                Log.i(TAG, "Found pwm-fan cooling levels: $levels")
+            }
+        }
     }
 
     private fun readPwmPercent(path: String): Int {
@@ -136,4 +170,25 @@ object FanController {
             (pwm.toDouble() / PWM_MAX * 100.0).roundToInt()
         }
     }
+
+    internal fun parseCoolingLevels(bytes: List<Int>): List<Int>? {
+        if (bytes.isEmpty() || bytes.size % Int.SIZE_BYTES != 0) return null
+        val levels = bytes.chunked(Int.SIZE_BYTES).map { cell ->
+            cell.fold(0) { value, byte -> (value shl 8) or byte }
+        }
+        return levels.takeIf { values ->
+            values.first() == 0 &&
+                values.all { it in 0..PWM_MAX } &&
+                values.zipWithNext().all { (left, right) -> left <= right }
+        }
+    }
+
+    internal fun shouldUseFanCurve(
+        appPwm: Int,
+        thermalState: Int,
+        coolingLevels: List<Int>?,
+    ): Boolean = thermalState <= 0 || coolingLevels
+        ?.getOrNull(thermalState)
+        ?.let { kernelPwm -> appPwm > kernelPwm }
+        ?: false
 }

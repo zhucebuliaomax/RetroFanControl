@@ -73,6 +73,9 @@ fun DefaultProfileSection(
                 title = stringResource(R.string.select_preset),
                 choices = profileChoices,
                 selectedId = if (active == DefaultPicker.GAME) gameProfileId else nonGameProfileId,
+                disabledIds = setOf(
+                    if (active == DefaultPicker.GAME) nonGameProfileId else gameProfileId
+                ),
                 showRadio = true,
                 addLabel = stringResource(R.string.add_preset),
                 onSelected = { id -> id?.let { onDefaultProfileSelected(active == DefaultPicker.GAME, it) } },
@@ -251,6 +254,7 @@ fun ChoiceDialog(
     title: String,
     choices: List<AppProfileChoice>,
     selectedId: String? = null,
+    disabledIds: Set<String?> = emptySet(),
     showRadio: Boolean,
     addLabel: String? = null,
     onSelected: (String?) -> Unit = {},
@@ -264,6 +268,7 @@ fun ChoiceDialog(
         itemLabel = { index -> choices[index].name },
         selectedIndex = choices.indexOfFirst { it.id == selectedId },
         showRadio = showRadio,
+        itemEnabled = { index -> choices[index].id !in disabledIds },
         addLabel = addLabel,
         onSelected = { index -> onSelected(choices[index].id) },
         onItemClick = { index ->

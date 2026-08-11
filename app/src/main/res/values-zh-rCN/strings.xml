@@ -15,7 +15,7 @@
     <string name="control_back">返回控制模块</string>
     <string name="app_default_preset">默认配置</string>
     <string name="game_profile">游戏配置</string>
-    <string name="non_game_profile">非游戏配置</string>
+    <string name="non_game_profile">其他应用配置</string>
     <string name="app_profile">配置</string>
     <string name="app_profile_preset">配置</string>
     <string name="search_apps">搜索应用</string>

@@ -16,12 +16,11 @@ object PresetPreferences {
     ): ControlPresetConfig {
         val stored = prefs.getString(Prefs.PRESET_CATALOG, null)
         val decoded = stored?.let(::decodeCatalog) ?: ControlPresetCatalog()
-        val normalizedPresets = decoded.presets
-            .ifEmpty { ControlPresetCatalog().presets }
-            .let { presets ->
-                if (presets.any(ControlPreset::isDefault)) presets
-                else listOf(ControlPresetCatalog.defaultPreset()) + presets
-            }
+        val normalizedPresets = (
+            ControlPresetCatalog.factoryPresets().map { factory ->
+                decoded.preset(factory.id)?.copy(isDefault = true) ?: factory
+            } + decoded.presets.filterNot { it.id in ControlPresetCatalog.factoryIds }
+        )
             .map { preset ->
                 normalizeControlReferences(
                     preset,
@@ -35,18 +34,21 @@ object PresetPreferences {
         val legacySelectedId = prefs.getString(Prefs.SELECTED_PRESET, null)
         val selectedId = prefs.getString(Prefs.SELECTED_GAME_PROFILE, legacySelectedId)
             ?.takeIf { catalog.preset(it) != null }
-            ?: catalog.presets.first { it.isDefault }.id
+            ?: ControlPresetCatalog.DEFAULT_ID
         val selectedNonGameId = prefs.getString(
             Prefs.SELECTED_NON_GAME_PROFILE,
             legacySelectedId,
         )?.takeIf { catalog.preset(it) != null }
-            ?: catalog.presets.first { it.isDefault }.id
-        val config = ControlPresetConfig(catalog, selectedId, selectedNonGameId)
+            ?: ControlPresetCatalog.OTHER_APPS_ID
+        val distinctNonGameId = if (selectedNonGameId == selectedId) {
+            catalog.presets.firstOrNull { it.id != selectedId }?.id ?: selectedNonGameId
+        } else selectedNonGameId
+        val config = ControlPresetConfig(catalog, selectedId, distinctNonGameId)
 
         if (
             stored == null || decoded != catalog ||
             prefs.getString(Prefs.SELECTED_GAME_PROFILE, null) != selectedId ||
-            prefs.getString(Prefs.SELECTED_NON_GAME_PROFILE, null) != selectedNonGameId
+            prefs.getString(Prefs.SELECTED_NON_GAME_PROFILE, null) != distinctNonGameId
         ) {
             persist(prefs, config)
         }
@@ -100,7 +102,12 @@ object PresetPreferences {
         )
         val selectedId = presetId.takeIf { current.catalog.preset(it) != null }
             ?: current.selectedPresetId
-        return current.copy(selectedPresetId = selectedId).also { persist(prefs, it) }
+        return current.copy(
+            selectedPresetId = selectedId,
+            selectedNonGamePresetId = if (selectedId == current.selectedNonGamePresetId) {
+                current.selectedPresetId
+            } else current.selectedNonGamePresetId,
+        ).also { persist(prefs, it) }
     }
 
     fun selectDefault(
@@ -122,9 +129,19 @@ object PresetPreferences {
         val selectedId = presetId.takeIf { current.catalog.preset(it) != null }
             ?: return current
         return if (isGame) {
-            current.copy(selectedPresetId = selectedId)
+            current.copy(
+                selectedPresetId = selectedId,
+                selectedNonGamePresetId = if (selectedId == current.selectedNonGamePresetId) {
+                    current.selectedPresetId
+                } else current.selectedNonGamePresetId,
+            )
         } else {
-            current.copy(selectedNonGamePresetId = selectedId)
+            current.copy(
+                selectedPresetId = if (selectedId == current.selectedPresetId) {
+                    current.selectedNonGamePresetId
+                } else current.selectedPresetId,
+                selectedNonGamePresetId = selectedId,
+            )
         }.also { persist(prefs, it) }
     }
 
@@ -296,14 +313,17 @@ object PresetPreferences {
             availableButtonLayoutProfileIds,
         )
         val target = current.catalog.preset(presetId) ?: return current
-        if (target.isDefault) return current
+        if (target.id in ControlPresetCatalog.factoryIds) return current
         val catalog = current.catalog.remove(presetId)
         val selectedId = current.selectedPresetId.takeIf { catalog.preset(it) != null }
-            ?: catalog.presets.first { it.isDefault }.id
+            ?: ControlPresetCatalog.DEFAULT_ID
         val selectedNonGameId = current.selectedNonGamePresetId
             .takeIf { catalog.preset(it) != null }
-            ?: catalog.presets.first { it.isDefault }.id
-        return ControlPresetConfig(catalog, selectedId, selectedNonGameId)
+            ?: ControlPresetCatalog.OTHER_APPS_ID
+        val distinctNonGameId = if (selectedId == selectedNonGameId) {
+            catalog.presets.first { it.id != selectedId }.id
+        } else selectedNonGameId
+        return ControlPresetConfig(catalog, selectedId, distinctNonGameId)
             .also { persist(prefs, it) }
     }
 

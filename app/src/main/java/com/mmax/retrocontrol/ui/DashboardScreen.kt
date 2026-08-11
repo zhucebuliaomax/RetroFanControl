@@ -110,6 +110,7 @@ import com.mmax.retrocontrol.R
 import com.mmax.retrocontrol.BuildConfig
 import com.mmax.retrocontrol.RootAccessManager
 import com.mmax.retrocontrol.data.ControlItemJson
+import com.mmax.retrocontrol.data.ControlPresetCatalog
 import com.mmax.retrocontrol.data.FanCurvePoint
 import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.displayName
@@ -341,7 +342,7 @@ fun DashboardScreen(
         PresetListItemUiState(
             id = preset.id,
             name = preset.name,
-            isDefault = preset.isDefault,
+            isDefault = preset.id in ControlPresetCatalog.factoryIds,
             fanCurveName = fanCurveName(preset.fanCurveId),
             joystickProfileName = joystickProfileName(preset.joystickId),
             buttonLayoutName = buttonLayoutProfileName(preset.buttonLayoutId),

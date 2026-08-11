@@ -19,7 +19,7 @@
     <string name="app_profile_preset">プロファイル</string>
     <string name="app_default_preset">デフォルトプロファイル</string>
     <string name="game_profile">ゲームプロファイル</string>
-    <string name="non_game_profile">非ゲームプロファイル</string>
+    <string name="non_game_profile">その他のアプリのプロファイル</string>
     <string name="follow_profile">プロファイルに従う</string>
     <string name="follow_default">デフォルトに従う</string>
     <string name="follow_system">システムに従う</string>

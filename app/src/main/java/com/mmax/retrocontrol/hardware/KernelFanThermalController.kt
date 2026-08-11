@@ -97,9 +97,9 @@ object KernelFanThermalController {
                 success = false
             }
         }
-        if (disableUsbFanControl && !FanController.writeState(0)) {
+        if (!FanController.writeState(0)) {
             success = false
-            Log.w(TAG, "Unable to clear stale pwm-fan cooling state")
+            Log.w(TAG, "Unable to clear pwm-fan state after thermal policy transition")
         }
         Log.i(
             TAG,
