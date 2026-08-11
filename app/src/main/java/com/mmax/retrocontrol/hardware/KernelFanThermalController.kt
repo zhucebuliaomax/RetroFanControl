@@ -29,8 +29,8 @@ object KernelFanThermalController {
 
     /**
      * CPU/GPU fan trips are suppressed by default so the user curve owns the fan. USB fan trips
-     * follow the Settings switch. Only trip points whose cooling device is `pwm-fan` are changed;
-     * frequency throttling, CPU hotplug, thermal pause, and thermal-zone modes remain enabled.
+     * follow the Settings switch. Disabling USB fan control also disables its fan-only thermal
+     * zone; CPU/GPU frequency throttling, hotplug, thermal pause, and zone modes remain enabled.
      */
     @Synchronized
     fun apply(
@@ -57,7 +57,9 @@ object KernelFanThermalController {
         val zones = trips.groupBy { it.zonePath }
         val targetModes = zones.mapValues { (_, zoneTrips) ->
             val kind = zoneTrips.first().kind
-            if (
+            if (kind == ThermalKind.USB && disableUsbFanControl) {
+                "disabled"
+            } else if (
                 disableThermalProtection && kind in setOf(ThermalKind.CPU, ThermalKind.GPU)
             ) {
                 "disabled"
@@ -85,10 +87,6 @@ object KernelFanThermalController {
                 Log.w(TAG, "Unable to write ${trip.zoneType} fan trip ${trip.tripIndex}")
             }
         }
-        if (disableUsbFanControl && !FanController.writeState(0)) {
-            success = false
-            Log.w(TAG, "Unable to clear stale pwm-fan cooling state")
-        }
         zones.forEach { (zonePath, zoneTrips) ->
             if (!setZoneMode(
                     zonePath,
@@ -98,6 +96,10 @@ object KernelFanThermalController {
             ) {
                 success = false
             }
+        }
+        if (disableUsbFanControl && !FanController.writeState(0)) {
+            success = false
+            Log.w(TAG, "Unable to clear stale pwm-fan cooling state")
         }
         Log.i(
             TAG,
