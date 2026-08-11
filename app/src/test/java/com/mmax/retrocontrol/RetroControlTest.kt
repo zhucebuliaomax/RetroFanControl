@@ -379,11 +379,17 @@ class RetroControlTest {
     }
 
     @Test
-    fun buttonLayoutCatalog_startsWithFollowSystemAndNewLayoutsStayNintendo() {
+    fun buttonLayoutCatalog_startsWithNintendoThenXbox() {
         val catalog = ButtonLayoutProfileCatalog()
 
-        assertTrue(catalog.profiles.isEmpty())
-        assertNull(ControlPresetCatalog.defaultPreset().buttonLayoutId)
+        assertEquals(
+            listOf(ButtonLayoutProfileCatalog.NINTENDO_ID, ButtonLayoutProfileCatalog.XBOX_ID),
+            catalog.profiles.map { it.id },
+        )
+        assertEquals(
+            ButtonLayoutProfileCatalog.NINTENDO_ID,
+            ControlPresetCatalog.defaultPreset().buttonLayoutId,
+        )
         assertEquals(
             BuiltInPerformanceProfile.STOCK.id,
             ControlPresetCatalog.defaultPreset().performanceProfileId,
@@ -392,8 +398,13 @@ class RetroControlTest {
     }
 
     @Test
-    fun legacyBuiltInButtonLayouts_areNoLongerFactoryProfiles() {
-        assertTrue(ButtonLayoutProfileCatalog.factoryProfiles().isEmpty())
+    fun builtInButtonLayouts_haveFixedNamesAndLayouts() {
+        val profiles = ButtonLayoutProfileCatalog.factoryProfiles()
+
+        assertEquals("Nintendo", profiles[0].name)
+        assertEquals(FaceButtonLayout.NINTENDO, profiles[0].layout)
+        assertEquals("Xbox", profiles[1].name)
+        assertEquals(FaceButtonLayout.XBOX, profiles[1].layout)
     }
 
     @Test

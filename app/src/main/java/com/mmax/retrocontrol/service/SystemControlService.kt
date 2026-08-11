@@ -25,6 +25,7 @@ import com.mmax.retrocontrol.data.FanCurvePreferences
 import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.ButtonLayoutProfile
 import com.mmax.retrocontrol.data.ButtonLayoutProfilePreferences
+import com.mmax.retrocontrol.data.ButtonLayoutTilePreferences
 import com.mmax.retrocontrol.data.CpuFrequencyPolicy
 import com.mmax.retrocontrol.data.FanSelectionPreferences
 import com.mmax.retrocontrol.data.FanControlConfig
@@ -37,6 +38,7 @@ import com.mmax.retrocontrol.data.PresetPreferences
 import com.mmax.retrocontrol.data.Prefs
 import com.mmax.retrocontrol.data.JoystickProfile
 import com.mmax.retrocontrol.data.JoystickProfilePreferences
+import com.mmax.retrocontrol.data.JoystickSelectionPreferences
 import com.mmax.retrocontrol.data.displayName
 import com.mmax.retrocontrol.hardware.FanController
 import com.mmax.retrocontrol.hardware.FanResponseController
@@ -79,6 +81,7 @@ class SystemControlService : Service() {
 
     companion object {
         private const val TAG = "SystemControlService"
+        private const val SYSTEM_UI_PACKAGE = "com.android.systemui"
         const val CHANNEL_ID = "fan_control"
         private const val NOTIFICATION_ID = 1
         const val ACTION_UPDATE = "com.mmax.retrocontrol.UPDATE"
@@ -223,6 +226,7 @@ class SystemControlService : Service() {
                 loadJoystickPreferences()
                 applyButtonLayout()
                 applyPerformanceProfile()
+                syncTilesToForegroundApp()
             }
             Prefs.FAN_SELECTION_SOURCE,
             Prefs.FAN_SELECTION_CURVE,
@@ -474,13 +478,14 @@ class SystemControlService : Service() {
                 availablePerformanceProfileIds = performanceIds,
             )
             val appIsGame = AppProfilePreferences.isGame(this@SystemControlService, foregroundPackageName)
-            val targetId = PerformanceTilePreferences.selectedProfileId(prefs, profileConfig)
-                ?: PerformanceProfileResolver.resolveTargetProfileId(
+            val appTargetId = PerformanceProfileResolver.resolveTargetProfileId(
                     profileConfig = profileConfig,
                     presetConfig = presetConfig,
                     appProfile = foregroundPackageName?.let(appProfiles::get),
                     appIsGame = appIsGame,
                 )
+            val targetId = if (foregroundPackageName != null) appTargetId
+            else PerformanceTilePreferences.selectedProfileId(prefs, profileConfig) ?: appTargetId
             val previouslyApplied = prefs.getString(
                 Prefs.LAST_APPLIED_PERFORMANCE_PROFILE,
                 null,
@@ -534,8 +539,13 @@ class SystemControlService : Service() {
         foregroundJob = scope.launch {
             while (isActive) {
                 val foreground = ForegroundAppResolver.currentPackageName()
+                if (foreground == packageName || foreground == SYSTEM_UI_PACKAGE) {
+                    delay(1_000L)
+                    continue
+                }
                 if (foreground != foregroundPackageName) {
                     foregroundPackageName = foreground
+                    prefs.edit { putString(Prefs.CURRENT_FOREGROUND_APP, foreground) }
                     if (foreground.isNullOrBlank()) {
                         loadFanPreferences()
                     } else {
@@ -544,6 +554,7 @@ class SystemControlService : Service() {
                     loadJoystickPreferences()
                     applyButtonLayout()
                     applyPerformanceProfile()
+                    syncTilesToForegroundApp()
                     showProfileSwitchToast(foreground)
                     Log.i(
                         TAG,
@@ -572,6 +583,38 @@ class SystemControlService : Service() {
             ?: resolved
         configRevision++
         FanQuickSettingsTile.requestRefresh(applicationContext)
+    }
+
+    private fun syncTilesToForegroundApp() {
+        val packageName = foregroundPackageName ?: return
+        val appIsGame = AppProfilePreferences.isGame(this, packageName)
+        val joystick = JoystickProfilePreferences.resolveEffectiveProfile(prefs, packageName, appIsGame)
+        if (JoystickSelectionPreferences.load(prefs, JoystickProfilePreferences.load(prefs)).enabled) {
+            joystick?.let { JoystickSelectionPreferences.selectDirectProfile(prefs, it.id) }
+            JoystickQuickSettingsTile.requestRefresh(applicationContext)
+        }
+
+        val button = ButtonLayoutProfilePreferences.resolveEffectiveProfile(prefs, packageName, appIsGame)
+        if (button == null) ButtonLayoutTilePreferences.clearSelection(prefs)
+        else ButtonLayoutTilePreferences.select(prefs, button.id)
+        ButtonLayoutQuickSettingsTile.requestRefresh(applicationContext)
+
+        val policies = CpuFrequencyController.detectPolicies()
+        val performanceConfig = PerformanceProfilePreferences.load(prefs, policies)
+        val performanceIds = performanceConfig.profiles.mapTo(mutableSetOf()) { it.id }
+        val fanIds = FanCurvePreferences.load(prefs).catalog.profiles.mapTo(mutableSetOf()) { it.id }
+        val joystickIds = JoystickProfilePreferences.load(prefs).profiles.mapTo(mutableSetOf()) { it.id }
+        val presets = PresetPreferences.load(prefs, fanIds, joystickIds, performanceIds)
+        val apps = AppProfilePreferences.load(
+            prefs, presets.catalog.presets.mapTo(mutableSetOf()) { it.id }, fanIds,
+            joystickIds, performanceIds,
+        )
+        val performanceId = PerformanceProfileResolver.resolveTargetProfileId(
+            performanceConfig, presets, apps[packageName], appIsGame,
+        )
+        if (performanceId == null) PerformanceTilePreferences.clearSelection(prefs)
+        else PerformanceTilePreferences.select(prefs, performanceId)
+        PerformanceQuickSettingsTile.requestRefresh(applicationContext)
     }
 
     private fun promoteForMediaProjection() {

@@ -4,7 +4,7 @@
     <string name="joystick_add_profile">Add profile</string>
     <string name="joystick_new_profile">New profile</string>
     <string name="joystick_delete_profile">Delete profile</string>
-    <string name="joystick_delete_profile_confirmation">Delete “%1$s”?</string>
+    <string name="joystick_delete_profile_confirmation">Delete "%1$s"?</string>
     <string name="joystick_delete">Delete</string>
     <string name="joystick_cancel">Cancel</string>
     <string name="joystick_confirm">Confirm</string>

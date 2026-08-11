@@ -15,6 +15,7 @@ import com.mmax.retrocontrol.RootAccessManager
 import com.mmax.retrocontrol.data.JoystickProfilePreferences
 import com.mmax.retrocontrol.data.JoystickSelectionPreferences
 import com.mmax.retrocontrol.data.JoystickSelectionSource
+import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.Prefs
 import com.mmax.retrocontrol.feature.joystick.JoystickRgbMode
 import com.mmax.retrocontrol.service.MediaProjectionActivity
@@ -32,6 +33,15 @@ class JoystickQuickSettingsTile : TileService() {
         super.onClick()
         val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
         val next = JoystickSelectionPreferences.toggle(prefs)
+        if (next.enabled) {
+            val foreground = prefs.getString(Prefs.CURRENT_FOREGROUND_APP, null)
+            val profileId = JoystickProfilePreferences.resolveEffectiveProfile(
+                prefs = prefs,
+                foregroundPackageName = foreground,
+                foregroundIsGame = AppProfilePreferences.isGame(this, foreground),
+            )?.id
+            CurrentAppControls.setJoystick(this, prefs, profileId)
+        }
         updateTile()
         if (next.enabled && requiresAmbilightCapture(prefs)) {
             val captureIntent = MediaProjectionActivity.createIntent(this)

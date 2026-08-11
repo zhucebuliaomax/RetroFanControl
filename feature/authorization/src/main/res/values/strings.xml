@@ -27,6 +27,7 @@
     <string name="authorization_data">Data</string>
     <string name="authorization_export_data">Export all data</string>
     <string name="authorization_import_data">Import data</string>
+    <string name="authorization_import_data_summary">Importing data will not replace local data</string>
     <string name="authorization_reset_data">Reset all data</string>
     <string name="authorization_disable_usb_thermal_footer">The default USB thermal policy is extremely aggressive: the fan ramps to about half speed at 43°C, and nearly full speed at 45°C. For more details, check RP6 Kernel Thermal Strategy. An aggressive ramp-up often occurs while the device is charging. The teardown of the RP6 shows that the fan provides almost no airflow over the USB port, so this behavior is of questionable benefit.\nThis option disables USB thermal fan control. But use at your own risk.</string>
     <string name="authorization_usb_thermal_strategy">RP6 Kernel Thermal Strategy</string>

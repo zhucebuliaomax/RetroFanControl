@@ -31,7 +31,7 @@
     <string name="rename_preset">Rename profile</string>
     <string name="preset_name">Profile name</string>
     <string name="delete_preset">Delete profile</string>
-    <string name="delete_preset_confirmation">Delete “%1$s”? This cannot be undone.</string>
+    <string name="delete_preset_confirmation">Delete "%1$s"? This cannot be undone.</string>
     <string name="preset_fan_curve">Fan curve</string>
     <string name="preset_performance_profile">Frequency profile</string>
     <string name="performance_unmanaged">Unmanaged</string>
@@ -45,7 +45,7 @@
     <string name="new_performance_profile">New frequency profile</string>
     <string name="add_performance_profile">Add frequency profile</string>
     <string name="delete_performance_profile">Delete frequency profile</string>
-    <string name="delete_performance_profile_confirmation">Delete “%1$s”? This cannot be undone.</string>
+    <string name="delete_performance_profile_confirmation">Delete "%1$s"? This cannot be undone.</string>
     <string name="follow_preset">Follow profile</string>
     <string name="follow_profile">Follow profile</string>
     <string name="follow_default">Follow default</string>
@@ -103,7 +103,7 @@
     <string name="rename_curve">Rename curve</string>
     <string name="curve_name">Curve name</string>
     <string name="delete_curve">Delete curve</string>
-    <string name="delete_curve_confirmation">Delete “%1$s”? This cannot be undone.</string>
+    <string name="delete_curve_confirmation">Delete "%1$s"? This cannot be undone.</string>
     <string name="set_as_default">Set default</string>
     <string name="reset">Reset</string>
     <string name="import_items">Import</string>
@@ -138,7 +138,7 @@
     <string name="new_button_layout">New button layout</string>
     <string name="rename_button_layout">Rename button layout</string>
     <string name="delete_button_layout">Delete button layout</string>
-    <string name="delete_button_layout_confirmation">Delete “%1$s”? Profiles using it will stop managing gamepad buttons.</string>
+    <string name="delete_button_layout_confirmation">Delete "%1$s"? Profiles using it will stop managing gamepad buttons.</string>
     <string name="button_layout_name">Button layout name</string>
     <string name="button_layout_unmanaged">Follow system</string>
     <string name="button_layout_follow_system_summary">Use the system button settings</string>

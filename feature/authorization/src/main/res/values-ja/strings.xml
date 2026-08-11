@@ -27,6 +27,7 @@
     <string name="authorization_data">データ</string>
     <string name="authorization_export_data">すべてのデータをエクスポート</string>
     <string name="authorization_import_data">データをインポート</string>
+    <string name="authorization_import_data_summary">データをインポートしてもローカルデータは置き換えられません</string>
     <string name="authorization_reset_data">すべてのデータをリセット</string>
     <string name="authorization_disable_usb_thermal_footer">標準の USB 温度制御は非常に積極的です。43°C でファンは約半速まで上がり、45°C ではほぼ全速になります。詳細は RP6 カーネル温度制御戦略を確認してください。充電中には、この積極的な回転数上昇が頻繁に発生します。RP6 を分解して確認すると、ファンから USB ポートへ届く気流はほとんどなく、この動作の実用的な効果には疑問があります。\nこのオプションは USB 温度によるファン制御を無効にします。自己責任で使用してください。</string>
     <string name="authorization_usb_thermal_strategy">RP6 カーネル温度制御戦略</string>

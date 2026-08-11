@@ -37,6 +37,7 @@ class PerformanceQuickSettingsTile : TileService() {
         }
 
         PerformanceTilePreferences.select(prefs, profileId)
+        CurrentAppControls.setPerformance(this, prefs, profileId)
         updateTile(config)
         RootAccessManager.ensureRoot { granted ->
             if (granted) {

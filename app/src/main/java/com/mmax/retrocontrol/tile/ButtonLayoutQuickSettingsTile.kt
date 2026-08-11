@@ -28,6 +28,7 @@ class ButtonLayoutQuickSettingsTile : TileService() {
         val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
         val catalog = ButtonLayoutProfilePreferences.load(prefs)
         val selected = ButtonLayoutTilePreferences.selectNext(prefs, catalog)
+        selected?.let { CurrentAppControls.setButtonLayout(this, prefs, it.id) }
         updateTile(catalog)
         if (selected == null) return
 

@@ -460,6 +460,8 @@ object FanSelectionPreferences {
         foregroundIsGame: Boolean = false,
     ): FanControlConfig {
         val current = suppliedFanConfig ?: FanCurvePreferences.load(prefs)
+        val previousSelection = load(prefs, current)
+        if (!previousSelection.enabled) return current.copy(activeProfileId = null)
         val presetConfig = loadPresetConfig(prefs, current)
         val appProfile = loadAppProfiles(prefs, current, presetConfig)[foregroundPackageName]
         val targetId = resolveAppTargetProfileId(
@@ -468,7 +470,6 @@ object FanSelectionPreferences {
             appProfile = appProfile,
             appIsGame = foregroundIsGame,
         )
-        val previousSelection = load(prefs, current)
         persist(
             prefs,
             selectionForAppTarget(
@@ -502,13 +503,13 @@ object FanSelectionPreferences {
         val presetConfig = loadPresetConfig(prefs, current)
         val appProfiles = loadAppProfiles(prefs, current, presetConfig)
         val appProfile = foregroundPackageName?.let(appProfiles::get)
-        val targetId = resolveTargetProfileId(
-            selection = selection,
-            presetConfig = presetConfig,
-            fanCatalog = current.catalog,
-            appProfile = appProfile,
-            appIsGame = foregroundIsGame,
-        )
+        val targetId = if (foregroundPackageName != null) {
+            if (selection.enabled) {
+                resolveAppTargetProfileId(presetConfig, current.catalog, appProfile, foregroundIsGame)
+            } else null
+        } else {
+            resolveTargetProfileId(selection, presetConfig, current.catalog, appProfile, foregroundIsGame)
+        }
         return current.copy(activeProfileId = targetId)
     }
 
@@ -542,6 +543,9 @@ object FanSelectionPreferences {
         appIsGame: Boolean = false,
     ): String? {
         if (!selection.enabled) return null
+        if (appProfile != null) {
+            return resolveAppTargetProfileId(presetConfig, fanCatalog, appProfile, appIsGame)
+        }
         return when (val source = selection.source) {
             FanSelectionSource.FollowPreset -> resolveAppTargetProfileId(
                 presetConfig = presetConfig,

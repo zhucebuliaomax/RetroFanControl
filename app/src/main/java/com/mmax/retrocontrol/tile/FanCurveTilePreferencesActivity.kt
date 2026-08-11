@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.mmax.retrocontrol.MainActivity
 import com.mmax.retrocontrol.R
 import com.mmax.retrocontrol.RootAccessManager
+import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.FanCurvePreferences
 import com.mmax.retrocontrol.data.ButtonLayoutProfilePreferences
 import com.mmax.retrocontrol.data.ButtonLayoutTilePreferences
@@ -174,13 +175,6 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
                                     )
                                 }
                             } else if (buttonLayoutTile) {
-                                add(
-                                    TileSourceUi(
-                                        name = getString(R.string.follow_system),
-                                        selected = selectedButtonLayoutId == null,
-                                        onClick = ::selectFollowSystemButtonLayout,
-                                    ),
-                                )
                                 buttonLayoutCatalog.profiles.forEach { profile ->
                                     add(
                                         TileSourceUi(
@@ -311,22 +305,23 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
     }
 
     private fun select(profileId: String) {
-        FanSelectionPreferences.selectDirectCurve(
-            getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE), profileId
-        )
+        val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
+        FanSelectionPreferences.selectDirectCurve(prefs, profileId)
+        CurrentAppControls.setFan(this, prefs, profileId)
         finishSelection()
     }
 
     private fun selectFollowPreset() {
-        FanSelectionPreferences.selectFollowPreset(
-            getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
-        )
+        val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
+        val config = FanSelectionPreferences.selectFollowPreset(prefs)
+        CurrentAppControls.setFan(this, prefs, config.activeProfileId)
         finishSelection()
     }
 
     private fun selectJoystick(profileId: String) {
         val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
         JoystickSelectionPreferences.selectDirectProfile(prefs, profileId)
+        CurrentAppControls.setJoystick(this, prefs, profileId)
         val requiresCapture = JoystickProfilePreferences.load(prefs)
             .profile(profileId)?.mode == JoystickRgbMode.AMBILIGHT
         finishJoystickSelection(requiresCapture)
@@ -335,19 +330,19 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
     private fun selectFollowJoystickProfile() {
         val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
         JoystickSelectionPreferences.selectFollowProfile(prefs)
+        val foreground = prefs.getString(Prefs.CURRENT_FOREGROUND_APP, null)
         val requiresCapture = JoystickProfilePreferences.resolveEffectiveProfile(
             prefs = prefs,
-            foregroundPackageName = null,
-            foregroundIsGame = false,
+            foregroundPackageName = foreground,
+            foregroundIsGame = AppProfilePreferences.isGame(this, foreground),
         )?.mode == JoystickRgbMode.AMBILIGHT
         finishJoystickSelection(requiresCapture)
     }
 
     private fun selectPerformanceProfile(profileId: String) {
-        PerformanceTilePreferences.select(
-            getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE),
-            profileId,
-        )
+        val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
+        PerformanceTilePreferences.select(prefs, profileId)
+        CurrentAppControls.setPerformance(this, prefs, profileId)
         PerformanceQuickSettingsTile.requestRefresh(this)
         RootAccessManager.ensureRoot {
             SystemControlService.startOrUpdate(applicationContext)
@@ -356,21 +351,9 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
     }
 
     private fun selectButtonLayout(profileId: String) {
-        ButtonLayoutTilePreferences.select(
-            getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE),
-            profileId,
-        )
-        ButtonLayoutQuickSettingsTile.requestRefresh(this)
-        RootAccessManager.ensureRoot {
-            SystemControlService.startOrUpdate(applicationContext)
-            finish()
-        }
-    }
-
-    private fun selectFollowSystemButtonLayout() {
-        ButtonLayoutTilePreferences.clearSelection(
-            getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE),
-        )
+        val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
+        ButtonLayoutTilePreferences.select(prefs, profileId)
+        CurrentAppControls.setButtonLayout(this, prefs, profileId)
         ButtonLayoutQuickSettingsTile.requestRefresh(this)
         RootAccessManager.ensureRoot {
             SystemControlService.startOrUpdate(applicationContext)

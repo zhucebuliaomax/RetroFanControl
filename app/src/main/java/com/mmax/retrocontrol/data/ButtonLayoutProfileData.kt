@@ -7,8 +7,8 @@ import org.json.JSONObject
 import java.util.UUID
 
 enum class FaceButtonLayout(val sysfsValue: String) {
-    XBOX("xbox"),
     NINTENDO("nintendo"),
+    XBOX("xbox"),
 }
 
 enum class GamepadButtonMapping(val sysfsValue: String) {
@@ -102,8 +102,10 @@ data class ButtonLayoutProfileCatalog(
         const val NINTENDO_ID = "button-layout-nintendo"
         val factoryIds: Set<String> = setOf(XBOX_ID, NINTENDO_ID)
 
-        /** Legacy IDs are retained only so old built-in entries can be removed on migration. */
-        fun factoryProfiles(): List<ButtonLayoutProfile> = emptyList()
+        fun factoryProfiles(): List<ButtonLayoutProfile> = listOf(
+            ButtonLayoutProfile(NINTENDO_ID, "Nintendo", FaceButtonLayout.NINTENDO),
+            ButtonLayoutProfile(XBOX_ID, "Xbox", FaceButtonLayout.XBOX),
+        )
     }
 }
 
@@ -111,12 +113,12 @@ object ButtonLayoutProfilePreferences {
     fun load(prefs: SharedPreferences): ButtonLayoutProfileCatalog {
         val stored = prefs.getString(Prefs.BUTTON_LAYOUT_PROFILE_CATALOG, null)
         val decoded = stored?.let(::decode) ?: ButtonLayoutProfileCatalog()
-        val decodedProfiles = decoded.profiles
+        val customProfiles = decoded.profiles
             .filterNot { it.id in ButtonLayoutProfileCatalog.factoryIds }
             .distinctBy(ButtonLayoutProfile::id)
             .map(ButtonLayoutProfile::normalized)
         val normalized = ButtonLayoutProfileCatalog(
-            decodedProfiles.filterNot(ButtonLayoutProfile::isBuiltIn),
+            ButtonLayoutProfileCatalog.factoryProfiles() + customProfiles,
         )
         if (stored == null || decoded != normalized) persist(prefs, normalized)
         return normalized
@@ -194,8 +196,10 @@ object ButtonLayoutProfilePreferences {
         foregroundIsGame: Boolean = false,
     ): ButtonLayoutProfile? {
         val catalog = load(prefs)
-        ButtonLayoutTilePreferences.selectedProfileId(prefs, catalog)?.let { tileProfileId ->
-            return catalog.profile(tileProfileId)
+        if (foregroundPackageName == null) {
+            ButtonLayoutTilePreferences.selectedProfileId(prefs, catalog)?.let { tileProfileId ->
+                return catalog.profile(tileProfileId)
+            }
         }
         val buttonLayoutIds = catalog.profiles.mapTo(mutableSetOf(), ButtonLayoutProfile::id)
         val fanIds = FanCurvePreferences.load(prefs).catalog.profiles
@@ -314,6 +318,7 @@ object ButtonLayoutTilePreferences {
         catalog: ButtonLayoutProfileCatalog,
     ): String? = prefs.getString(Prefs.BUTTON_LAYOUT_TILE_PROFILE, null)
         ?.takeIf { catalog.profile(it) != null }
+        ?: catalog.profile(ButtonLayoutProfileCatalog.NINTENDO_ID)?.id
 
     fun select(prefs: SharedPreferences, profileId: String) {
         prefs.edit { putString(Prefs.BUTTON_LAYOUT_TILE_PROFILE, profileId) }

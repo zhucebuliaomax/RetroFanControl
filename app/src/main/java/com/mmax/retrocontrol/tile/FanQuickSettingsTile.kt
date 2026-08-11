@@ -31,6 +31,7 @@ class FanQuickSettingsTile : TileService() {
         super.onClick()
         val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
         val next = FanSelectionPreferences.toggle(prefs)
+        if (next.enabled) CurrentAppControls.setFan(this, prefs, next.activeProfileId)
         updateTile(next)
         RootAccessManager.ensureRoot { granted ->
             val started = granted && runCatching {

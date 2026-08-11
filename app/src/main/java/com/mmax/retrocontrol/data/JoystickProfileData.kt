@@ -196,9 +196,6 @@ object JoystickProfilePreferences {
         val catalog = load(prefs)
         val tileSelection = JoystickSelectionPreferences.load(prefs, catalog)
         if (!tileSelection.enabled) return null
-        (tileSelection.source as? JoystickSelectionSource.DirectProfile)?.let { direct ->
-            return catalog.profile(direct.profileId)
-        }
         val joystickIds = catalog.profiles.mapTo(mutableSetOf(), JoystickProfile::id)
         val fanIds = FanCurvePreferences.load(prefs).catalog.profiles
             .mapTo(mutableSetOf()) { it.id }
@@ -210,6 +207,11 @@ object JoystickProfilePreferences {
             availableJoystickProfileIds = joystickIds,
         )
         val appProfile = foregroundPackageName?.let(appProfiles::get)
+        if (foregroundPackageName == null) {
+            (tileSelection.source as? JoystickSelectionSource.DirectProfile)?.let { direct ->
+                return catalog.profile(direct.profileId)
+            }
+        }
         val targetId = appProfile?.joystickId
             ?.takeIf(joystickIds::contains)
             ?: AppProfilePreferences.effectivePreset(

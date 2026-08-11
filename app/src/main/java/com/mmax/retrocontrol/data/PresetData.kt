@@ -7,7 +7,7 @@ data class ControlPreset(
     /** Null represents Off. */
     val fanCurveId: String? = BuiltInFanCurve.NORMAL.id,
     val joystickId: String? = null,
-    val buttonLayoutId: String? = null,
+    val buttonLayoutId: String? = ButtonLayoutProfileCatalog.NINTENDO_ID,
     val performanceProfileId: String? = BuiltInPerformanceProfile.STOCK.id,
 ) {
     init {
@@ -44,6 +44,7 @@ data class ControlPresetCatalog(
             name = "default",
             isDefault = true,
             fanCurveId = BuiltInFanCurve.NORMAL.id,
+            buttonLayoutId = ButtonLayoutProfileCatalog.NINTENDO_ID,
         )
     }
 }

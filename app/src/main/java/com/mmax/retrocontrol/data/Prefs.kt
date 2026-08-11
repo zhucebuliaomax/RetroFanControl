@@ -25,6 +25,7 @@ object Prefs {
     const val PERFORMANCE_PROFILE_CATALOG = "performance_profile_catalog_v1"
     const val PERFORMANCE_TILE_PROFILE = "performance_tile_profile"
     const val LAST_APPLIED_PERFORMANCE_PROFILE = "last_applied_performance_profile"
+    const val CURRENT_FOREGROUND_APP = "current_foreground_app"
 
     // Version 1 migration keys.
     const val FAN_CURVE_QUIET = "fan_curve_quiet"

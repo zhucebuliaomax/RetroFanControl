@@ -62,6 +62,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -726,11 +727,13 @@ private fun AppListPane(
     modifier: Modifier = Modifier,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
+    var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var appFilter by rememberSaveable { mutableStateOf(AppListFilter.GAME) }
     var filterMenuExpanded by remember { mutableStateOf(false) }
     var searchFieldFocused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val searchFocusRequester = remember { FocusRequester() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val filteredApps = remember(installedApps, query, appFilter) {
         val normalized = query.trim()
@@ -746,9 +749,14 @@ private fun AppListPane(
             matchesQuery && (normalized.isNotEmpty() || matchesCategory)
         }
     }
-    BackHandler(enabled = searchFieldFocused) {
+    LaunchedEffect(searchExpanded) {
+        if (searchExpanded) searchFocusRequester.requestFocus()
+    }
+    BackHandler(enabled = searchFieldFocused || searchExpanded) {
         keyboardController?.hide()
         focusManager.clearFocus()
+        searchExpanded = false
+        query = ""
     }
     FocusScrollMargin {
         Column(
@@ -761,6 +769,15 @@ private fun AppListPane(
                 title = stringResource(R.string.nav_apps),
                 scrollBehavior = scrollBehavior,
                 actions = {
+                    IconButton(
+                        onClick = { searchExpanded = true },
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = stringResource(R.string.search_apps),
+                        )
+                    }
                     Box {
                         IconButton(
                             onClick = { filterMenuExpanded = true },
@@ -832,29 +849,32 @@ private fun AppListPane(
                 },
                 actionsEndPadding = 8.dp,
             )
-            Spacer(Modifier.size(8.dp))
-            TextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .onFocusChanged { searchFieldFocused = it.isFocused },
-                singleLine = true,
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null)
-                },
-                placeholder = { Text(stringResource(R.string.search_apps)) },
-                shape = RoundedCornerShape(16.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                ),
-            )
+            if (searchExpanded) {
+                Spacer(Modifier.size(8.dp))
+                TextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                        .focusRequester(searchFocusRequester)
+                        .onFocusChanged { searchFieldFocused = it.isFocused },
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null)
+                    },
+                    placeholder = { Text(stringResource(R.string.search_apps)) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                    ),
+                )
+            }
             Spacer(Modifier.size(12.dp))
             Column(
                 modifier = Modifier

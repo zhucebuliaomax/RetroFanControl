@@ -229,15 +229,16 @@ fun AuthorizationManagementSection(
             title = stringResource(R.string.authorization_export_data),
             onClick = onExportData,
             modifier = exportDataModifier,
-            trailingIcon = Icons.Default.FileDownload,
+            trailingIcon = Icons.Default.FileUpload,
         )
         SettingsPreferenceRow(
             index = 1,
             count = 3,
             title = stringResource(R.string.authorization_import_data),
+            summary = stringResource(R.string.authorization_import_data_summary),
             onClick = onImportData,
             modifier = importDataModifier,
-            trailingIcon = Icons.Default.FileUpload,
+            trailingIcon = Icons.Default.FileDownload,
         )
         SettingsPreferenceRow(
             index = 2,
@@ -246,6 +247,8 @@ fun AuthorizationManagementSection(
             onClick = onResetData,
             modifier = resetDataModifier,
             trailingIcon = Icons.Default.DeleteForever,
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
         )
     }
     Spacer(Modifier.height(20.dp))

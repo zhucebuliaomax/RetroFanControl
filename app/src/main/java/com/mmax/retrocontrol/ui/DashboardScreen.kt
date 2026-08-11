@@ -272,7 +272,7 @@ fun DashboardScreen(
     val addJoystickProfileFocusRequester = remember { FocusRequester() }
     val buttonLayoutProfileIds = state.buttonLayoutProfiles.profiles.map { it.id }
     val buttonLayoutProfileFocusRequesters = remember(buttonLayoutProfileIds) {
-        List(buttonLayoutProfileIds.size + 1) { FocusRequester() }
+        List(buttonLayoutProfileIds.size) { FocusRequester() }
     }
     val addButtonLayoutProfileFocusRequester = remember { FocusRequester() }
     val performanceProfileIds = state.performanceProfiles.profiles.map { it.id }
@@ -449,7 +449,7 @@ fun DashboardScreen(
             withFrameNanos { }
             buttonLayoutProfileIds.indexOf(restoreId)
                 .takeIf { it >= 0 }
-                ?.let { buttonLayoutProfileFocusRequesters[it + 1].requestFocus() }
+                ?.let { buttonLayoutProfileFocusRequesters[it].requestFocus() }
             restoreButtonLayoutFocusId = null
         }
     }
@@ -626,27 +626,18 @@ fun DashboardScreen(
         buttonLayoutContent = {
             ButtonLayoutProfilesSection(
                 profiles = state.buttonLayoutProfiles.profiles,
-                followSystemName = unmanagedButtonLayoutName,
                 onProfileSelected = { editingButtonLayoutProfileId = it },
                 onDeleteProfile = vm::deleteButtonLayoutProfile,
-                followSystemModifier = Modifier
-                    .focusRequester(buttonLayoutProfileFocusRequesters[0])
-                    .focusProperties {
-                        up = FocusRequester.Default
-                        down = buttonLayoutProfileFocusRequesters.getOrNull(1)
-                            ?: addButtonLayoutProfileFocusRequester
-                        left = FocusRequester.Default
-                        right = FocusRequester.Default
-                    },
                 profileModifier = { index ->
                     Modifier
-                        .focusRequester(buttonLayoutProfileFocusRequesters[index + 1])
+                        .focusRequester(buttonLayoutProfileFocusRequesters[index])
                         .focusProperties {
-                            up = buttonLayoutProfileFocusRequesters[index]
+                            up = buttonLayoutProfileFocusRequesters.getOrNull(index - 1)
+                                ?: FocusRequester.Default
                             down = if (index == buttonLayoutProfileIds.lastIndex) {
                                 addButtonLayoutProfileFocusRequester
                             } else {
-                                buttonLayoutProfileFocusRequesters[index + 2]
+                                buttonLayoutProfileFocusRequesters[index + 1]
                             }
                             left = FocusRequester.Default
                             right = FocusRequester.Default
@@ -1210,7 +1201,6 @@ fun DashboardScreen(
             },
             buttonLayoutName = buttonLayoutProfileName(preset.buttonLayoutId),
             buttonLayoutChoices = buildList {
-                add(PresetButtonLayoutChoice(null, unmanagedButtonLayoutName))
                 state.buttonLayoutProfiles.profiles.forEach { profile ->
                     add(PresetButtonLayoutChoice(profile.id, profile.name))
                 }
