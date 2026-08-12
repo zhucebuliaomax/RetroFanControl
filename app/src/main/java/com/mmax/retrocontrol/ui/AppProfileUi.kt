@@ -28,7 +28,11 @@ import com.mmax.retrocontrol.designsystem.settingsSegmentedShapes
 import com.mmax.retrocontrol.designsystem.SettingsSectionTitle
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 
-data class AppProfileChoice(val id: String?, val name: String)
+data class AppProfileChoice(
+    val id: String?,
+    val name: String,
+    val summary: String? = null,
+)
 
 private enum class DefaultPicker { GAME, NON_GAME }
 private enum class AppPicker { PROFILE, FAN, JOYSTICK, BUTTON, PERFORMANCE }
@@ -271,6 +275,7 @@ fun ChoiceDialog(
         },
         itemCount = choices.size,
         itemLabel = { index -> choices[index].name },
+        itemSummary = { index -> choices[index].summary },
         selectedIndex = choices.indexOfFirst { it.id == selectedId },
         showRadio = showRadio,
         itemEnabled = { index -> choices[index].id !in disabledIds },

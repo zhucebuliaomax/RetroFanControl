@@ -794,31 +794,61 @@ fun DashboardScreen(
                     ?.let(::performanceProfileName)
                     ?: resources.getString(R.string.follow_profile),
                 profileChoices = buildList {
-                    add(AppProfileChoice(null, resources.getString(R.string.follow_default)))
+                    add(
+                        AppProfileChoice(
+                            null,
+                            resources.getString(R.string.follow_default),
+                            effectivePreset.name,
+                        )
+                    )
                     state.presetConfig.catalog.presets.forEach {
                         add(AppProfileChoice(it.id, it.name))
                     }
                 },
                 fanCurveChoices = buildList {
-                    add(AppProfileChoice(null, resources.getString(R.string.follow_profile)))
+                    add(
+                        AppProfileChoice(
+                            null,
+                            resources.getString(R.string.follow_profile),
+                            fanCurveName(effectivePreset.fanCurveId),
+                        )
+                    )
                     state.fanConfig.catalog.profiles.forEach { fanProfile ->
                         add(AppProfileChoice(fanProfile.id, fanProfile.displayName(context)))
                     }
                 },
                 joystickChoices = buildList {
-                    add(AppProfileChoice(null, resources.getString(R.string.follow_profile)))
+                    add(
+                        AppProfileChoice(
+                            null,
+                            resources.getString(R.string.follow_profile),
+                            joystickProfileName(effectivePreset.joystickId),
+                        )
+                    )
                     state.joystickProfiles.profiles.forEach { joystickProfile ->
                         add(AppProfileChoice(joystickProfile.id, joystickProfile.name))
                     }
                 },
                 buttonLayoutChoices = buildList {
-                    add(AppProfileChoice(null, resources.getString(R.string.follow_profile)))
+                    add(
+                        AppProfileChoice(
+                            null,
+                            resources.getString(R.string.follow_profile),
+                            buttonLayoutProfileName(effectivePreset.buttonLayoutId),
+                        )
+                    )
                     state.buttonLayoutProfiles.profiles.forEach { buttonLayout ->
                         add(AppProfileChoice(buttonLayout.id, buttonLayout.name))
                     }
                 },
                 performanceChoices = buildList {
-                    add(AppProfileChoice(null, resources.getString(R.string.follow_profile)))
+                    add(
+                        AppProfileChoice(
+                            null,
+                            resources.getString(R.string.follow_profile),
+                            performanceProfileName(effectivePreset.performanceProfileId),
+                        )
+                    )
                     state.performanceProfiles.profiles.forEach { performanceProfile ->
                         add(
                             AppProfileChoice(

@@ -376,6 +376,7 @@ fun SettingsListDialog(
     description: String? = null,
     itemCount: Int,
     itemLabel: (Int) -> String,
+    itemSummary: (Int) -> String? = { null },
     onItemClick: (Int) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -458,6 +459,9 @@ fun SettingsListDialog(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
+                            },
+                            supportingContent = itemSummary(index)?.let { summary ->
+                                { Text(summary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
