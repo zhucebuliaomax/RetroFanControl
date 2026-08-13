@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -37,7 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,7 +53,6 @@ import com.mmax.retrocontrol.data.ControlPreset
 import com.mmax.retrocontrol.designsystem.SecondaryMenuList
 import com.mmax.retrocontrol.designsystem.SecondaryMenuListItem
 import com.mmax.retrocontrol.designsystem.SecondaryMenuSelectableListItem
-import com.mmax.retrocontrol.designsystem.SwipeToDeleteSecondaryMenuListItem
 import com.mmax.retrocontrol.designsystem.settingsSegmentedShapes
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 
@@ -96,31 +93,17 @@ private val PresetListItemUiState.summary: String
 fun PresetManagementSection(
     presets: List<PresetListItemUiState>,
     onPresetClick: (String) -> Unit,
-    onDeletePreset: (String) -> Unit,
     itemModifier: (Int) -> Modifier = { Modifier },
 ) {
     SecondaryMenuList {
         presets.forEachIndexed { index, preset ->
-            if (preset.isDefault) {
-                PresetListItem(
-                    preset = preset,
-                    index = index,
-                    count = presets.size,
-                    onClick = { onPresetClick(preset.id) },
-                    modifier = itemModifier(index),
-                )
-            } else {
-                key(preset.id) {
-                    SwipeToDeletePresetItem(
-                        preset = preset,
-                        index = index,
-                        count = presets.size,
-                        onClick = { onPresetClick(preset.id) },
-                        onDelete = { onDeletePreset(preset.id) },
-                        modifier = itemModifier(index),
-                    )
-                }
-            }
+            PresetListItem(
+                preset = preset,
+                index = index,
+                count = presets.size,
+                onClick = { onPresetClick(preset.id) },
+                modifier = itemModifier(index),
+            )
         }
     }
 }
@@ -199,45 +182,6 @@ private fun PresetListItem(
         supportingContent = { Text(preset.summary) },
         modifier = modifier,
     )
-}
-
-@Composable
-private fun SwipeToDeletePresetItem(
-    preset: PresetListItemUiState,
-    index: Int,
-    count: Int,
-    onClick: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var showConfirmation by remember(preset.id) { mutableStateOf(false) }
-    SwipeToDeleteSecondaryMenuListItem(
-        index = index,
-        count = count,
-        onClick = onClick,
-        onDeleteRequest = { showConfirmation = true },
-        deleteIcon = Icons.Default.Delete,
-        deleteContentDescription = stringResource(R.string.delete_preset),
-        modifier = modifier,
-        supportingContent = { Text(preset.summary) },
-        content = {
-            Text(
-                text = preset.name,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-    )
-    if (showConfirmation) {
-        DeletePresetConfirmation(
-            name = preset.name,
-            onConfirm = {
-                showConfirmation = false
-                onDelete()
-            },
-            onDismiss = { showConfirmation = false },
-        )
-    }
 }
 
 @Composable

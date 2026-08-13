@@ -512,7 +512,6 @@ fun DashboardScreen(
                 onProfileSelected = { profileId ->
                     editingProfileId = profileId
                 },
-                onDeleteProfile = vm::deleteFanCurve,
                 showTitle = false,
                 offModifier = Modifier
                     .focusRequester(fanProfileFocusRequesters[0])
@@ -687,7 +686,6 @@ fun DashboardScreen(
             PresetManagementSection(
                 presets = presetItems,
                 onPresetClick = { editingPresetId = it },
-                onDeletePreset = vm::deletePreset,
                 itemModifier = { index ->
                     Modifier
                         .focusRequester(presetFocusRequesters[index])
