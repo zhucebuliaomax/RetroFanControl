@@ -202,7 +202,9 @@ object ControlItemJson {
                 name = name,
                 mode = runCatching {
                     JoystickRgbMode.valueOf(data.optString("mode"))
-                }.getOrDefault(JoystickRgbMode.STATIC),
+                }.getOrDefault(JoystickRgbMode.STATIC).takeUnless {
+                    it == JoystickRgbMode.AMBILIGHT
+                } ?: JoystickRgbMode.STATIC,
                 red = data.optInt("red", 255),
                 green = data.optInt("green", 100),
                 blue = data.optInt("blue", 0),

@@ -46,6 +46,7 @@ import com.mmax.retrocontrol.hardware.FanController
 import com.mmax.retrocontrol.hardware.FanResponseController
 import com.mmax.retrocontrol.hardware.CpuFrequencyController
 import com.mmax.retrocontrol.hardware.JoystickEffectEngine
+import com.mmax.retrocontrol.data.AmbilightPreferences
 import com.mmax.retrocontrol.hardware.GamepadController
 import com.mmax.retrocontrol.hardware.TelemetryRepository
 import com.mmax.retrocontrol.hardware.ThermalSensorReader
@@ -53,6 +54,7 @@ import com.mmax.retrocontrol.hardware.ThermalSnapshot
 import com.mmax.retrocontrol.hardware.KernelFanThermalController
 import com.mmax.retrocontrol.overlay.TelemetryOverlay
 import com.mmax.retrocontrol.tile.FanQuickSettingsTile
+import com.mmax.retrocontrol.tile.AmbilightQuickSettingsTile
 import com.mmax.retrocontrol.tile.OverlayTileService
 import com.mmax.retrocontrol.tile.JoystickQuickSettingsTile
 import com.mmax.retrocontrol.tile.PerformanceQuickSettingsTile
@@ -268,6 +270,11 @@ class SystemControlService : Service() {
                 loadJoystickPreferences(force = true)
                 JoystickQuickSettingsTile.requestRefresh(applicationContext)
             }
+            Prefs.AMBILIGHT_TILE_ENABLED,
+            Prefs.AMBILIGHT_BRIGHTNESS -> {
+                loadJoystickPreferences()
+                AmbilightQuickSettingsTile.requestRefresh(applicationContext)
+            }
             Prefs.OVERLAY_ENABLED -> {
                 loadOverlayPreference()
                 applyOverlayState()
@@ -307,6 +314,7 @@ class SystemControlService : Service() {
         applyOverlayState()
         FanQuickSettingsTile.requestRefresh(applicationContext)
         JoystickQuickSettingsTile.requestRefresh(applicationContext)
+        AmbilightQuickSettingsTile.requestRefresh(applicationContext)
         PerformanceQuickSettingsTile.requestRefresh(applicationContext)
         ButtonLayoutQuickSettingsTile.requestRefresh(applicationContext)
         OverlayTileService.requestRefresh(applicationContext)
@@ -331,7 +339,7 @@ class SystemControlService : Service() {
                     @Suppress("DEPRECATION")
                     intent.getParcelableExtra(EXTRA_PROJECTION_INTENT)
                 }
-                if (token != null) {
+                if (token != null && AmbilightPreferences.isEnabled(prefs)) {
                     promoteForMediaProjection()
                     joystickEffects.setMediaProjectionIntent(token)
                 }
@@ -399,7 +407,8 @@ class SystemControlService : Service() {
 
     private fun loadJoystickPreferences(force: Boolean = false) {
         val catalog = JoystickProfilePreferences.load(prefs)
-        joystickProfile = previewJoystickProfileId?.let(catalog::profile)
+        joystickProfile = AmbilightPreferences.takeIf { it.isEnabled(prefs) }?.profile(prefs)
+            ?: previewJoystickProfileId?.let(catalog::profile)
             ?: JoystickProfilePreferences.resolveEffectiveProfile(
                 prefs = prefs,
                 foregroundPackageName = foregroundPackageName,

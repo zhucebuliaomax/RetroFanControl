@@ -221,40 +221,6 @@ fun AuthorizationManagementSection(
     }
     Spacer(Modifier.height(20.dp))
     SettingsSectionTitle(
-        text = stringResource(R.string.authorization_data),
-        modifier = Modifier.padding(bottom = SettingsTokens.sectionTitleBottomPadding),
-    )
-    SettingsSegmentGroup {
-        SettingsPreferenceRow(
-            index = 0,
-            count = 3,
-            title = stringResource(R.string.authorization_export_data),
-            onClick = onExportData,
-            modifier = exportDataModifier,
-            trailingIcon = Icons.Default.FileUpload,
-        )
-        SettingsPreferenceRow(
-            index = 1,
-            count = 3,
-            title = stringResource(R.string.authorization_import_data),
-            summary = stringResource(R.string.authorization_import_data_summary),
-            onClick = onImportData,
-            modifier = importDataModifier,
-            trailingIcon = Icons.Default.FileDownload,
-        )
-        SettingsPreferenceRow(
-            index = 2,
-            count = 3,
-            title = stringResource(R.string.authorization_reset_data),
-            onClick = onResetData,
-            modifier = resetDataModifier,
-            trailingIcon = Icons.Default.DeleteForever,
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        )
-    }
-    Spacer(Modifier.height(20.dp))
-    SettingsSectionTitle(
         text = stringResource(R.string.authorization_caution),
         modifier = Modifier.padding(bottom = SettingsTokens.sectionTitleBottomPadding),
     )
@@ -294,6 +260,40 @@ fun AuthorizationManagementSection(
         }
     }
     UsbThermalFooter()
+    Spacer(Modifier.height(20.dp))
+    SettingsSectionTitle(
+        text = stringResource(R.string.authorization_data),
+        modifier = Modifier.padding(bottom = SettingsTokens.sectionTitleBottomPadding),
+    )
+    SettingsSegmentGroup {
+        SettingsPreferenceRow(
+            index = 0,
+            count = 3,
+            title = stringResource(R.string.authorization_export_data),
+            onClick = onExportData,
+            modifier = exportDataModifier,
+            trailingIcon = Icons.Default.FileUpload,
+        )
+        SettingsPreferenceRow(
+            index = 1,
+            count = 3,
+            title = stringResource(R.string.authorization_import_data),
+            summary = stringResource(R.string.authorization_import_data_summary),
+            onClick = onImportData,
+            modifier = importDataModifier,
+            trailingIcon = Icons.Default.FileDownload,
+        )
+        SettingsPreferenceRow(
+            index = 2,
+            count = 3,
+            title = stringResource(R.string.authorization_reset_data),
+            onClick = onResetData,
+            modifier = resetDataModifier,
+            trailingIcon = Icons.Default.DeleteForever,
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
     Spacer(Modifier.height(20.dp))
     val dangerContentColor = MaterialTheme.colorScheme.onErrorContainer
     SettingsSectionTitle(

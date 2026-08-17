@@ -28,20 +28,24 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mmax.retrocontrol.MainActivity
 import com.mmax.retrocontrol.R
 import com.mmax.retrocontrol.RootAccessManager
-import com.mmax.retrocontrol.data.AppProfilePreferences
+import com.mmax.retrocontrol.data.AmbilightPreferences
 import com.mmax.retrocontrol.data.FanCurvePreferences
 import com.mmax.retrocontrol.data.ButtonLayoutProfilePreferences
 import com.mmax.retrocontrol.data.ButtonLayoutTilePreferences
@@ -55,11 +59,10 @@ import com.mmax.retrocontrol.data.PerformanceProfileConfig
 import com.mmax.retrocontrol.data.PerformanceProfilePreferences
 import com.mmax.retrocontrol.data.PerformanceTilePreferences
 import com.mmax.retrocontrol.data.displayName
-import com.mmax.retrocontrol.feature.joystick.JoystickRgbMode
 import com.mmax.retrocontrol.hardware.CpuFrequencyController
-import com.mmax.retrocontrol.service.MediaProjectionActivity
 import com.mmax.retrocontrol.service.SystemControlService
 import com.mmax.retrocontrol.theme.RetroControlTheme
+import kotlin.math.roundToInt
 
 /** Routes Quick Settings long presses and renders the matching chooser as a dialog window. */
 class FanCurveTilePreferencesActivity : ComponentActivity() {
@@ -82,6 +85,11 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         window.setGravity(Gravity.CENTER)
         setFinishOnTouchOutside(true)
+
+        if (originatingTile()?.className == AmbilightQuickSettingsTile::class.java.name) {
+            showAmbilightBrightnessDialog()
+            return
+        }
 
         val joystickTile = originatingTile()?.className ==
             JoystickQuickSettingsTile::class.java.name
@@ -271,6 +279,62 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
         )
     }
 
+    private fun showAmbilightBrightnessDialog() {
+        val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
+        setContent {
+            RetroControlTheme {
+                var node by remember {
+                    mutableIntStateOf(
+                        (AmbilightPreferences.brightness(prefs) * 10 / 255f).roundToInt()
+                    )
+                }
+                Surface(
+                    modifier = Modifier.width(360.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Column(Modifier.padding(24.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = stringResource(R.string.ambilight_brightness),
+                                style = MaterialTheme.typography.titleLargeEmphasized,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = "${node * 10}%",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Slider(
+                            value = node.toFloat(),
+                            onValueChange = { node = it.roundToInt().coerceIn(0, 10) },
+                            onValueChangeFinished = {
+                                AmbilightPreferences.setBrightness(
+                                    prefs,
+                                    (node * 255 / 10f).roundToInt(),
+                                )
+                            },
+                            valueRange = 0f..10f,
+                            steps = 9,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            TextButton(
+                                onClick = { finish() },
+                                shapes = ButtonDefaults.shapes(),
+                            ) { Text(stringResource(R.string.cancel)) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     override fun finish() {
         super.finish()
         @Suppress("DEPRECATION")
@@ -322,21 +386,13 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
         val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
         JoystickSelectionPreferences.selectDirectProfile(prefs, profileId)
         CurrentAppControls.setJoystick(this, prefs, profileId)
-        val requiresCapture = JoystickProfilePreferences.load(prefs)
-            .profile(profileId)?.mode == JoystickRgbMode.AMBILIGHT
-        finishJoystickSelection(requiresCapture)
+        finishJoystickSelection()
     }
 
     private fun selectFollowJoystickProfile() {
         val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
         JoystickSelectionPreferences.selectFollowProfile(prefs)
-        val foreground = prefs.getString(Prefs.CURRENT_FOREGROUND_APP, null)
-        val requiresCapture = JoystickProfilePreferences.resolveEffectiveProfile(
-            prefs = prefs,
-            foregroundPackageName = foreground,
-            foregroundIsGame = AppProfilePreferences.isGame(this, foreground),
-        )?.mode == JoystickRgbMode.AMBILIGHT
-        finishJoystickSelection(requiresCapture)
+        finishJoystickSelection()
     }
 
     private fun selectPerformanceProfile(profileId: String) {
@@ -361,13 +417,10 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
         }
     }
 
-    private fun finishJoystickSelection(requiresAmbilightCapture: Boolean) {
+    private fun finishJoystickSelection() {
         JoystickQuickSettingsTile.requestRefresh(this)
         RootAccessManager.ensureRoot {
             SystemControlService.startOrUpdate(applicationContext)
-            if (requiresAmbilightCapture) {
-                startActivity(MediaProjectionActivity.createIntent(this))
-            }
             finish()
         }
     }

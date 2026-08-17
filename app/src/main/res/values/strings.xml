@@ -64,6 +64,8 @@
     <string name="tile_fan_label">Fan curve</string>
     <string name="tile_overlay_label">Telemetry</string>
     <string name="tile_joystick_label">Joysticks</string>
+    <string name="tile_ambilight_label">Ambilight</string>
+    <string name="ambilight_brightness">Ambilight brightness</string>
     <string name="tile_performance_label">Frequency profile</string>
     <string name="tile_button_layout_label">Button layout</string>
     <string name="tile_on">On</string>

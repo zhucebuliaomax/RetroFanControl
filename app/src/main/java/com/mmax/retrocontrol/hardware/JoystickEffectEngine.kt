@@ -422,14 +422,14 @@ class JoystickEffectEngine(
                     null,
                 )
                 val zones = listOf(
-                    AmbilightZone("/sys/class/leds/left:stick:0", 0, 0),
-                    AmbilightZone("/sys/class/leds/left:stick:3", 4, 0),
-                    AmbilightZone("/sys/class/leds/right:stick:2", 8, 0),
-                    AmbilightZone("/sys/class/leds/right:stick:1", 12, 0),
-                    AmbilightZone("/sys/class/leds/left:stick:1", 0, 5),
-                    AmbilightZone("/sys/class/leds/left:stick:2", 4, 5),
-                    AmbilightZone("/sys/class/leds/right:stick:3", 8, 5),
-                    AmbilightZone("/sys/class/leds/right:stick:0", 12, 5),
+                    AmbilightZone("/sys/class/leds/left:stick:0", 1, 1),
+                    AmbilightZone("/sys/class/leds/left:stick:3", 4, 1),
+                    AmbilightZone("/sys/class/leds/left:stick:1", 1, 4),
+                    AmbilightZone("/sys/class/leds/left:stick:2", 4, 4),
+                    AmbilightZone("/sys/class/leds/right:stick:2", 10, 3),
+                    AmbilightZone("/sys/class/leds/right:stick:1", 13, 3),
+                    AmbilightZone("/sys/class/leds/right:stick:3", 10, 6),
+                    AmbilightZone("/sys/class/leds/right:stick:0", 13, 6),
                 )
                 val smoothedColors = arrayOfNulls<Triple<Float, Float, Float>>(zones.size)
                 val previousColors = arrayOfNulls<Triple<Int, Int, Int>>(zones.size)
@@ -637,7 +637,7 @@ class JoystickEffectEngine(
     companion object {
         private const val TAG = "JoystickEffectEngine"
         private const val AMBILIGHT_FRAME_INTERVAL_MS = 50L
-        private const val AMBILIGHT_ZONE_SIZE = 4
+        private const val AMBILIGHT_ZONE_SIZE = 2
         private const val AMBILIGHT_MAX_CHANNEL_STEP = 17
         private const val AMBILIGHT_SMOOTHING_ALPHA = 0.2f
         private const val AMBILIGHT_MIN_RELIABLE_SATURATION = 0.02f

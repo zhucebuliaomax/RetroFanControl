@@ -19,11 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import com.mmax.retrocontrol.data.JoystickProfilePreferences
 import com.mmax.retrocontrol.data.Prefs
-import com.mmax.retrocontrol.feature.joystick.JoystickRgbMode
-import com.mmax.retrocontrol.hardware.JoystickEffectEngine
-import com.mmax.retrocontrol.service.MediaProjectionActivity
 import com.mmax.retrocontrol.service.SystemControlService
 import com.mmax.retrocontrol.theme.RetroControlTheme
 import com.mmax.retrocontrol.ui.DashboardScreen
@@ -85,19 +81,6 @@ class MainActivity : ComponentActivity() {
     private fun requestRoot(forceRefresh: Boolean) {
         RootAccessManager.ensureRoot(forceRefresh = forceRefresh) {
             SystemControlService.startOrUpdate(applicationContext)
-            requestAmbilightCaptureIfNeeded()
-        }
-    }
-
-    private fun requestAmbilightCaptureIfNeeded() {
-        if (JoystickEffectEngine.mediaProjectionActive) return
-        val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
-        val startsWithAmbilight = JoystickProfilePreferences.resolveEffectiveProfile(
-            prefs = prefs,
-            foregroundPackageName = null,
-        )?.mode == JoystickRgbMode.AMBILIGHT
-        if (JoystickEffectEngine.captureRequired || startsWithAmbilight) {
-            startActivity(MediaProjectionActivity.createIntent(this))
         }
     }
 

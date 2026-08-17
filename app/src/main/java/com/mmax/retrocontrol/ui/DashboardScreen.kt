@@ -129,7 +129,6 @@ import com.mmax.retrocontrol.feature.joystick.AddJoystickProfileButton
 import com.mmax.retrocontrol.feature.joystick.JoystickRgbMode
 import com.mmax.retrocontrol.feature.joystick.R as JoystickR
 import com.mmax.retrocontrol.service.SystemControlService
-import com.mmax.retrocontrol.service.MediaProjectionActivity
 import com.mmax.retrocontrol.tile.OverlayPermissionActivity
 import com.mmax.retrocontrol.util.formatFanPercent
 import kotlin.math.hypot
@@ -1337,9 +1336,6 @@ fun DashboardScreen(
             profile = profile,
             onModeSelected = { mode ->
                 vm.setJoystickMode(profile.id, mode)
-                if (mode == JoystickRgbMode.AMBILIGHT) {
-                    context.startActivity(MediaProjectionActivity.createIntent(context))
-                }
             },
             onColorSelected = { red, green, blue ->
                 vm.setJoystickColor(profile.id, red, green, blue)

@@ -269,7 +269,9 @@ object JoystickProfilePreferences {
                 val name = item.optString("name").takeIf(String::isNotBlank) ?: return@repeat
                 val mode = runCatching {
                     JoystickRgbMode.valueOf(item.optString("mode"))
-                }.getOrDefault(JoystickRgbMode.STATIC)
+                }.getOrDefault(JoystickRgbMode.STATIC).takeUnless {
+                    it == JoystickRgbMode.AMBILIGHT
+                } ?: JoystickRgbMode.STATIC
                 add(
                     JoystickProfile(
                         id = id,
@@ -285,4 +287,29 @@ object JoystickProfilePreferences {
         }
         JoystickProfileCatalog(profiles)
     }.getOrElse { JoystickProfileCatalog() }
+}
+
+object AmbilightPreferences {
+    private const val DEFAULT_BRIGHTNESS = 198
+
+    fun isEnabled(prefs: SharedPreferences): Boolean =
+        prefs.getBoolean(Prefs.AMBILIGHT_TILE_ENABLED, false)
+
+    fun brightness(prefs: SharedPreferences): Int =
+        prefs.getInt(Prefs.AMBILIGHT_BRIGHTNESS, DEFAULT_BRIGHTNESS).coerceIn(0, 255)
+
+    fun setEnabled(prefs: SharedPreferences, enabled: Boolean) {
+        prefs.edit { putBoolean(Prefs.AMBILIGHT_TILE_ENABLED, enabled) }
+    }
+
+    fun setBrightness(prefs: SharedPreferences, brightness: Int) {
+        prefs.edit { putInt(Prefs.AMBILIGHT_BRIGHTNESS, brightness.coerceIn(0, 255)) }
+    }
+
+    fun profile(prefs: SharedPreferences): JoystickProfile = JoystickProfile(
+        id = "ambilight-tile",
+        name = "Ambilight",
+        mode = JoystickRgbMode.AMBILIGHT,
+        brightness = brightness(prefs),
+    )
 }

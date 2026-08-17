@@ -9,6 +9,7 @@ import android.service.quicksettings.TileService
 import com.mmax.retrocontrol.R
 import com.mmax.retrocontrol.RootAccessManager
 import com.mmax.retrocontrol.data.PerformanceProfileConfig
+import com.mmax.retrocontrol.data.BuiltInPerformanceProfile
 import com.mmax.retrocontrol.data.PerformanceProfilePreferences
 import com.mmax.retrocontrol.data.PerformanceTilePreferences
 import com.mmax.retrocontrol.data.Prefs
@@ -62,7 +63,17 @@ class PerformanceQuickSettingsTile : TileService() {
         qsTile?.apply {
             icon = Icon.createWithResource(
                 applicationContext,
-                R.drawable.ic_tile_performance,
+                when (profile?.builtIn) {
+                    BuiltInPerformanceProfile.STOCK -> R.drawable.ic_tile_freq_stock
+                    BuiltInPerformanceProfile.BALANCED -> R.drawable.ic_tile_freq_balanced
+                    BuiltInPerformanceProfile.EFFICIENT -> R.drawable.ic_tile_freq_eco
+                    BuiltInPerformanceProfile.BATTERY_SAVER -> R.drawable.ic_tile_freq_ultra_eco
+                    null -> if (profile == null) {
+                        R.drawable.ic_tile_freq_stock
+                    } else {
+                        R.drawable.ic_tile_freq_custom
+                    }
+                },
             )
             label = getString(R.string.tile_performance_label)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

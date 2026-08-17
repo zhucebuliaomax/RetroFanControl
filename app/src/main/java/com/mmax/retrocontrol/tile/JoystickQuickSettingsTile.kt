@@ -1,10 +1,8 @@
 package com.mmax.retrocontrol.tile
 
 import android.annotation.SuppressLint
-import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.service.quicksettings.Tile
@@ -12,13 +10,11 @@ import android.service.quicksettings.TileService
 import androidx.core.content.edit
 import com.mmax.retrocontrol.R
 import com.mmax.retrocontrol.RootAccessManager
+import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.JoystickProfilePreferences
 import com.mmax.retrocontrol.data.JoystickSelectionPreferences
 import com.mmax.retrocontrol.data.JoystickSelectionSource
-import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.Prefs
-import com.mmax.retrocontrol.feature.joystick.JoystickRgbMode
-import com.mmax.retrocontrol.service.MediaProjectionActivity
 import com.mmax.retrocontrol.service.SystemControlService
 
 /** Tap toggles joystick lighting; long-press opens the profile chooser. */
@@ -43,23 +39,6 @@ class JoystickQuickSettingsTile : TileService() {
             CurrentAppControls.setJoystick(this, prefs, profileId)
         }
         updateTile()
-        if (next.enabled && requiresAmbilightCapture(prefs)) {
-            val captureIntent = MediaProjectionActivity.createIntent(this)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startActivityAndCollapse(
-                    PendingIntent.getActivity(
-                        this,
-                        AMBILIGHT_CAPTURE_REQUEST,
-                        captureIntent,
-                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                    )
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                startActivityAndCollapse(captureIntent)
-            }
-        }
         RootAccessManager.ensureRoot { granted ->
             val started = granted && runCatching {
                 SystemControlService.startOrUpdate(applicationContext)
@@ -70,14 +49,6 @@ class JoystickQuickSettingsTile : TileService() {
             requestRefresh(applicationContext)
         }
     }
-
-    private fun requiresAmbilightCapture(
-        prefs: android.content.SharedPreferences,
-    ): Boolean = JoystickProfilePreferences.resolveEffectiveProfile(
-        prefs = prefs,
-        foregroundPackageName = null,
-        foregroundIsGame = false,
-    )?.mode == JoystickRgbMode.AMBILIGHT
 
     private fun updateTile() {
         val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
@@ -106,8 +77,6 @@ class JoystickQuickSettingsTile : TileService() {
     }
 
     companion object {
-        private const val AMBILIGHT_CAPTURE_REQUEST = 42
-
         fun requestRefresh(context: Context) {
             requestListeningState(
                 context,

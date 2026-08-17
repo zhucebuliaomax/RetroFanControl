@@ -22,6 +22,8 @@ object Prefs {
     const val JOYSTICK_SELECTION_SOURCE = "joystick_selection_source"
     const val JOYSTICK_SELECTION_PROFILE = "joystick_selection_profile"
     const val JOYSTICK_TILE_ENABLED = "joystick_tile_enabled"
+    const val AMBILIGHT_TILE_ENABLED = "ambilight_tile_enabled"
+    const val AMBILIGHT_BRIGHTNESS = "ambilight_brightness"
     const val PERFORMANCE_PROFILE_CATALOG = "performance_profile_catalog_v1"
     const val PERFORMANCE_TILE_PROFILE = "performance_tile_profile"
     const val LAST_APPLIED_PERFORMANCE_PROFILE = "last_applied_performance_profile"

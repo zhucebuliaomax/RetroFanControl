@@ -64,6 +64,8 @@
     <string name="tile_fan_label">风扇曲线</string>
     <string name="tile_overlay_label">温度浮窗</string>
     <string name="tile_joystick_label">摇杆</string>
+    <string name="tile_ambilight_label">环境光</string>
+    <string name="ambilight_brightness">环境光亮度</string>
     <string name="tile_performance_label">频率方案</string>
     <string name="tile_button_layout_label">按键布局</string>
     <string name="tile_on">开启</string>

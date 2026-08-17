@@ -451,7 +451,7 @@ private fun RgbModeDialog(
     onModeSelected: (JoystickRgbMode) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val modes = JoystickRgbMode.entries
+    val modes = JoystickRgbMode.entries.filterNot { it == JoystickRgbMode.AMBILIGHT }
     val labels = modes.map { mode -> stringResource(mode.labelRes) }
     val selectMode: (Int) -> Unit = { index ->
         onModeSelected(modes[index])
