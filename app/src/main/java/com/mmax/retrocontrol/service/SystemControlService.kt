@@ -272,9 +272,14 @@ class SystemControlService : Service() {
             }
             Prefs.AMBILIGHT_TILE_ENABLED,
             Prefs.AMBILIGHT_BRIGHTNESS -> {
-                loadJoystickPreferences()
-                AmbilightQuickSettingsTile.requestRefresh(applicationContext)
+                scope.launch {
+                    loadJoystickPreferences()
+                    AmbilightQuickSettingsTile.requestRefresh(applicationContext)
+                }
             }
+            Prefs.AMBILIGHT_LEFT_STICK_LAYOUT -> joystickEffects.setAmbilightLeftStickLayout(
+                AmbilightPreferences.leftStickLayout(prefs)
+            )
             Prefs.OVERLAY_ENABLED -> {
                 loadOverlayPreference()
                 applyOverlayState()
@@ -406,6 +411,9 @@ class SystemControlService : Service() {
     }
 
     private fun loadJoystickPreferences(force: Boolean = false) {
+        joystickEffects.setAmbilightLeftStickLayout(
+            AmbilightPreferences.leftStickLayout(prefs)
+        )
         val catalog = JoystickProfilePreferences.load(prefs)
         joystickProfile = AmbilightPreferences.takeIf { it.isEnabled(prefs) }?.profile(prefs)
             ?: previewJoystickProfileId?.let(catalog::profile)

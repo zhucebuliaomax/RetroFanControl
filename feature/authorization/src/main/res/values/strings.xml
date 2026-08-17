@@ -23,6 +23,10 @@
     <string name="authorization_notifications">Notification settings</string>
     <string name="authorization_notifications_enabled">Enabled</string>
     <string name="authorization_notifications_disabled">Disabled</string>
+    <string name="authorization_ambilight_left_stick_layout">Ambilight left stick sampling layout</string>
+    <string name="authorization_ambilight_left_stick_upper">Upper stick</string>
+    <string name="authorization_ambilight_left_stick_lower">Lower stick</string>
+    <string name="authorization_cancel">Cancel</string>
     <string name="authorization_usb_thermal_control">USB thermal control</string>
     <string name="authorization_usb_thermal_fan_curve">USB thermal fan curve</string>
     <string name="authorization_caution">Caution</string>

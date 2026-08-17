@@ -902,6 +902,7 @@ fun DashboardScreen(
                     rootGranted = hasRoot,
                     overlayPermissionGranted = overlayPermissionGranted,
                     notificationsEnabled = notificationsEnabled,
+                    ambilightLeftStickLower = state.ambilightLeftStickLower,
                 ),
                 onTelemetryOverlayClick = {
                     if (!overlayPermissionGranted) {
@@ -936,6 +937,7 @@ fun DashboardScreen(
                 onOpenAppInfo = { context.openAppInfo() },
                 onOpenOverlaySettings = { context.openOverlaySettings() },
                 onOpenNotificationSettings = { context.openFanNotificationSettings() },
+                onAmbilightLeftStickLowerChange = vm::setAmbilightLeftStickLower,
                 onExportData = { exportDataLauncher.launch("RetroControl-data.json") },
                 onImportData = {
                     importDataLauncher.launch(

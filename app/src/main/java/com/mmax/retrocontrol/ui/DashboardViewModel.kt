@@ -13,6 +13,7 @@ import androidx.core.content.edit
 import com.mmax.retrocontrol.RootAccessManager
 import com.mmax.retrocontrol.data.AppControlProfile
 import com.mmax.retrocontrol.data.AppProfilePreferences
+import com.mmax.retrocontrol.data.AmbilightPreferences
 import com.mmax.retrocontrol.data.BuiltInFanCurve
 import com.mmax.retrocontrol.data.ButtonLayoutProfileCatalog
 import com.mmax.retrocontrol.data.ButtonLayoutProfilePreferences
@@ -80,6 +81,7 @@ data class DashboardState(
     val profileSwitchToastsCustomAppsOnly: Boolean = true,
     val usbThermalControl: UsbThermalFanControl = UsbThermalFanControl(),
     val thermalProtectionDisabled: Boolean = false,
+    val ambilightLeftStickLower: Boolean = false,
     val installedApps: List<InstalledAppInfo> = emptyList(),
     val appProfiles: Map<String, AppControlProfile> = emptyMap(),
     val telemetry: TelemetrySnapshot = TelemetrySnapshot(),
@@ -195,6 +197,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     Prefs.THERMAL_PROTECTION_DISABLED,
                     false,
                 ),
+                ambilightLeftStickLower = AmbilightPreferences.leftStickLayout(prefs) ==
+                    AmbilightPreferences.LeftStickLayout.LOWER,
             )
         }
     }
@@ -1105,6 +1109,16 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun setAutoStartEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(Prefs.AUTO_START_ENABLED, enabled) }
         mutableState.update { it.copy(autoStartEnabled = enabled) }
+    }
+
+    fun setAmbilightLeftStickLower(lower: Boolean) {
+        AmbilightPreferences.setLeftStickLayout(
+            prefs,
+            if (lower) AmbilightPreferences.LeftStickLayout.LOWER
+            else AmbilightPreferences.LeftStickLayout.UPPER,
+        )
+        mutableState.update { it.copy(ambilightLeftStickLower = lower) }
+        SystemControlService.startOrUpdate(getApplication())
     }
 
     fun setProfileSwitchToastsEnabled(enabled: Boolean) {

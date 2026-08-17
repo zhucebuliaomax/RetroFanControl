@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="authorization_ambilight_left_stick_layout">Ambilight 左スティックのサンプリング配置</string>
+    <string name="authorization_ambilight_left_stick_upper">上スティック</string>
+    <string name="authorization_ambilight_left_stick_lower">下スティック</string>
+    <string name="authorization_cancel">キャンセル</string>
     <string name="authorization_title">権限管理</string>
     <string name="authorization_telemetry_overlay">テレメトリーオーバーレイ</string>
     <string name="authorization_telemetry_overlay_summary">データ領域をタップしてコントロールを切り替えます</string>

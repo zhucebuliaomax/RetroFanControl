@@ -292,11 +292,20 @@ object JoystickProfilePreferences {
 object AmbilightPreferences {
     private const val DEFAULT_BRIGHTNESS = 198
 
+    enum class LeftStickLayout { UPPER, LOWER }
+
     fun isEnabled(prefs: SharedPreferences): Boolean =
         prefs.getBoolean(Prefs.AMBILIGHT_TILE_ENABLED, false)
 
     fun brightness(prefs: SharedPreferences): Int =
         prefs.getInt(Prefs.AMBILIGHT_BRIGHTNESS, DEFAULT_BRIGHTNESS).coerceIn(0, 255)
+
+    fun leftStickLayout(prefs: SharedPreferences): LeftStickLayout = runCatching {
+        LeftStickLayout.valueOf(
+            prefs.getString(Prefs.AMBILIGHT_LEFT_STICK_LAYOUT, null)
+                ?: LeftStickLayout.UPPER.name
+        )
+    }.getOrDefault(LeftStickLayout.UPPER)
 
     fun setEnabled(prefs: SharedPreferences, enabled: Boolean) {
         prefs.edit { putBoolean(Prefs.AMBILIGHT_TILE_ENABLED, enabled) }
@@ -304,6 +313,10 @@ object AmbilightPreferences {
 
     fun setBrightness(prefs: SharedPreferences, brightness: Int) {
         prefs.edit { putInt(Prefs.AMBILIGHT_BRIGHTNESS, brightness.coerceIn(0, 255)) }
+    }
+
+    fun setLeftStickLayout(prefs: SharedPreferences, layout: LeftStickLayout) {
+        prefs.edit { putString(Prefs.AMBILIGHT_LEFT_STICK_LAYOUT, layout.name) }
     }
 
     fun profile(prefs: SharedPreferences): JoystickProfile = JoystickProfile(

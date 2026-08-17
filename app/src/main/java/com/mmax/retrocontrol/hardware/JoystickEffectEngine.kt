@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.mmax.retrocontrol.data.JoystickProfile
+import com.mmax.retrocontrol.data.AmbilightPreferences
 import com.mmax.retrocontrol.feature.joystick.JoystickRgbMode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +37,8 @@ class JoystickEffectEngine(
     private var projection: MediaProjection? = null
     private var imageReader: ImageReader? = null
     private var virtualDisplay: android.hardware.display.VirtualDisplay? = null
+    @Volatile
+    private var ambilightLeftStickLayout = AmbilightPreferences.LeftStickLayout.UPPER
     private val frame = StringBuilder(768)
 
     fun apply(profile: JoystickProfile?, force: Boolean = false) {
@@ -67,6 +70,10 @@ class JoystickEffectEngine(
         captureRequired = false
         projectionIntent = intent
         apply(activeProfile, force = true)
+    }
+
+    fun setAmbilightLeftStickLayout(layout: AmbilightPreferences.LeftStickLayout) {
+        ambilightLeftStickLayout = layout
     }
 
     fun suspendForScreenOff() {
@@ -361,18 +368,8 @@ class JoystickEffectEngine(
                     null,
                     null,
                 )
-                val zones = listOf(
-                    AmbilightZone("/sys/class/leds/left:stick:0", 1, 1),
-                    AmbilightZone("/sys/class/leds/left:stick:3", 4, 1),
-                    AmbilightZone("/sys/class/leds/left:stick:1", 1, 4),
-                    AmbilightZone("/sys/class/leds/left:stick:2", 4, 4),
-                    AmbilightZone("/sys/class/leds/right:stick:2", 10, 3),
-                    AmbilightZone("/sys/class/leds/right:stick:1", 13, 3),
-                    AmbilightZone("/sys/class/leds/right:stick:3", 10, 6),
-                    AmbilightZone("/sys/class/leds/right:stick:0", 13, 6),
-                )
-                val smoothedColors = arrayOfNulls<Triple<Float, Float, Float>>(zones.size)
-                val previousColors = arrayOfNulls<Triple<Int, Int, Int>>(zones.size)
+                val smoothedColors = arrayOfNulls<Triple<Float, Float, Float>>(8)
+                val previousColors = arrayOfNulls<Triple<Int, Int, Int>>(8)
                 var lastFrameAt = 0L
                 imageReader?.setOnImageAvailableListener({ reader ->
                     val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
@@ -384,6 +381,7 @@ class JoystickEffectEngine(
                     lastFrameAt = now
                     val plane = image.planes[0]
                     frame.setLength(0)
+                    val zones = ambilightZones(ambilightLeftStickLayout)
                     zones.forEachIndexed { index, zone ->
                         val sampledColor = averageZoneColor(plane, zone)
                         val target = enhanceLowSaturation(sampledColor)
@@ -426,6 +424,13 @@ class JoystickEffectEngine(
                 captureRequired = true
             }
         }
+    }
+
+    private fun ambilightZones(
+        layout: AmbilightPreferences.LeftStickLayout,
+    ): List<AmbilightZone> = when (layout) {
+        AmbilightPreferences.LeftStickLayout.UPPER -> AMBILIGHT_UPPER_STICK_ZONES
+        AmbilightPreferences.LeftStickLayout.LOWER -> AMBILIGHT_LOWER_STICK_ZONES
     }
 
     private fun averageZoneColor(
@@ -592,6 +597,26 @@ class JoystickEffectEngine(
         var captureRequired = false
             private set
         private data class AmbilightZone(val path: String, val x: Int, val y: Int)
+        private val AMBILIGHT_UPPER_STICK_ZONES = listOf(
+            AmbilightZone("/sys/class/leds/left:stick:0", 1, 1),
+            AmbilightZone("/sys/class/leds/left:stick:3", 4, 1),
+            AmbilightZone("/sys/class/leds/left:stick:1", 1, 4),
+            AmbilightZone("/sys/class/leds/left:stick:2", 4, 4),
+            AmbilightZone("/sys/class/leds/right:stick:2", 10, 3),
+            AmbilightZone("/sys/class/leds/right:stick:1", 13, 3),
+            AmbilightZone("/sys/class/leds/right:stick:3", 10, 6),
+            AmbilightZone("/sys/class/leds/right:stick:0", 13, 6),
+        )
+        private val AMBILIGHT_LOWER_STICK_ZONES = listOf(
+            AmbilightZone("/sys/class/leds/left:stick:0", 1, 3),
+            AmbilightZone("/sys/class/leds/left:stick:3", 4, 3),
+            AmbilightZone("/sys/class/leds/left:stick:1", 1, 6),
+            AmbilightZone("/sys/class/leds/left:stick:2", 4, 6),
+            AmbilightZone("/sys/class/leds/right:stick:2", 10, 3),
+            AmbilightZone("/sys/class/leds/right:stick:1", 13, 3),
+            AmbilightZone("/sys/class/leds/right:stick:3", 10, 6),
+            AmbilightZone("/sys/class/leds/right:stick:0", 13, 6),
+        )
         private val sequentialPaths = listOf(
             "/sys/class/leds/left:stick:0",
             "/sys/class/leds/left:stick:3",

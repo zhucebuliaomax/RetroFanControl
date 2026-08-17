@@ -19,6 +19,10 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.res.stringResource
@@ -35,6 +39,7 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import com.mmax.retrocontrol.designsystem.SettingsPreferenceRow
+import com.mmax.retrocontrol.designsystem.SettingsListDialog
 import com.mmax.retrocontrol.designsystem.SettingsSegmentGroup
 import com.mmax.retrocontrol.designsystem.SettingsSectionTitle
 import com.mmax.retrocontrol.designsystem.SettingsTokens
@@ -50,6 +55,7 @@ data class AuthorizationUiState(
     val rootGranted: Boolean,
     val overlayPermissionGranted: Boolean,
     val notificationsEnabled: Boolean,
+    val ambilightLeftStickLower: Boolean,
 )
 
 /**
@@ -72,6 +78,7 @@ fun AuthorizationManagementSection(
     onOpenAppInfo: () -> Unit,
     onOpenOverlaySettings: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
+    onAmbilightLeftStickLowerChange: (Boolean) -> Unit,
     onExportData: () -> Unit,
     onImportData: () -> Unit,
     onResetData: () -> Unit,
@@ -90,6 +97,7 @@ fun AuthorizationManagementSection(
     importDataModifier: Modifier = Modifier,
     resetDataModifier: Modifier = Modifier,
 ) {
+    var showAmbilightLayoutDialog by remember { mutableStateOf(false) }
     SettingsSegmentGroup(modifier) {
         SettingsPreferenceRow(
             index = 0,
@@ -241,6 +249,42 @@ fun AuthorizationManagementSection(
             onClick = onOpenNotificationSettings,
             modifier = notificationsModifier,
             trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+        )
+    }
+    Spacer(Modifier.height(20.dp))
+    SettingsSegmentGroup {
+        SettingsPreferenceRow(
+            index = 0,
+            count = 1,
+            title = stringResource(R.string.authorization_ambilight_left_stick_layout),
+            summary = stringResource(
+                if (state.ambilightLeftStickLower) {
+                    R.string.authorization_ambilight_left_stick_lower
+                } else {
+                    R.string.authorization_ambilight_left_stick_upper
+                }
+            ),
+            onClick = { showAmbilightLayoutDialog = true },
+            trailingIcon = Icons.Default.ChevronRight,
+        )
+    }
+    if (showAmbilightLayoutDialog) {
+        val ambilightLayoutLabels = listOf(
+            stringResource(R.string.authorization_ambilight_left_stick_upper),
+            stringResource(R.string.authorization_ambilight_left_stick_lower),
+        )
+        SettingsListDialog(
+            title = stringResource(R.string.authorization_ambilight_left_stick_layout),
+            itemCount = 2,
+            itemLabel = ambilightLayoutLabels::get,
+            onItemClick = { index ->
+                onAmbilightLeftStickLowerChange(index == 1)
+                showAmbilightLayoutDialog = false
+            },
+            onDismiss = { showAmbilightLayoutDialog = false },
+            selectedIndex = if (state.ambilightLeftStickLower) 1 else 0,
+            showRadio = true,
+            cancelLabel = stringResource(R.string.authorization_cancel),
         )
     }
     Spacer(Modifier.height(20.dp))

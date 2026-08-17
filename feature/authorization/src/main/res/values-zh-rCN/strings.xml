@@ -22,6 +22,10 @@
     <string name="authorization_notifications">通知设置</string>
     <string name="authorization_notifications_enabled">已开启</string>
     <string name="authorization_notifications_disabled">已关闭</string>
+    <string name="authorization_ambilight_left_stick_layout">Ambilight 左摇杆采样方案</string>
+    <string name="authorization_ambilight_left_stick_upper">上摇杆</string>
+    <string name="authorization_ambilight_left_stick_lower">下摇杆</string>
+    <string name="authorization_cancel">取消</string>
     <string name="authorization_usb_thermal_control">USB 温控</string>
     <string name="authorization_usb_thermal_fan_curve">USB 温控风扇曲线</string>
     <string name="authorization_caution">注意</string>
