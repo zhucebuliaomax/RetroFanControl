@@ -1,22 +1,16 @@
 package com.mmax.retrocontrol.hardware
 
-import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
-import android.media.AudioFormat
-import android.media.AudioRecord
-import android.media.MediaRecorder
 import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.mmax.retrocontrol.data.JoystickProfile
 import com.mmax.retrocontrol.feature.joystick.JoystickRgbMode
 import kotlinx.coroutines.CancellationException
@@ -130,7 +124,6 @@ class JoystickEffectEngine(
             JoystickRgbMode.AURORA -> aurora(profile)
             JoystickRgbMode.OCEAN -> ocean(profile)
             JoystickRgbMode.STARLIGHT -> starlight(profile)
-            JoystickRgbMode.MUSIC -> music(profile)
         }
     }
 
@@ -338,59 +331,6 @@ class JoystickEffectEngine(
                 }
                 JoystickRgbController.execute(frame.toString())
                 delay(100L + random.nextInt(100))
-            }
-        }
-    }
-
-    private fun music(profile: JoystickProfile) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            scope.launch { JoystickRgbController.turnOff() }
-            return
-        }
-        effectJob = scope.launch {
-            var recorder: AudioRecord? = null
-            try {
-                val sampleRate = 8_000
-                val bufferSize = AudioRecord.getMinBufferSize(
-                    sampleRate,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                ).coerceAtLeast(1_024)
-                recorder = AudioRecord(
-                    MediaRecorder.AudioSource.MIC,
-                    sampleRate,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    bufferSize,
-                )
-                recorder.startRecording()
-                val samples = ShortArray(bufferSize / 2)
-                while (isActive) {
-                    val read = recorder.read(samples, 0, samples.size)
-                    if (read > 0) {
-                        var sum = 0L
-                        repeat(read) { index -> sum += abs(samples[index].toInt()) }
-                        val level = ((sum / read) / 5_000f).coerceIn(0f, 1f)
-                        val (red, green, blue) = hsvToRgb((240f - level * 240f))
-                        JoystickRgbController.setAll(
-                            red,
-                            green,
-                            blue,
-                            (profile.brightness * (0.1f + level * 0.9f)).toInt(),
-                        )
-                    }
-                    delay(120L)
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                Log.e(TAG, "Music effect failed", error)
-                JoystickRgbController.turnOff()
-            } finally {
-                runCatching { recorder?.stop() }
-                recorder?.release()
             }
         }
     }

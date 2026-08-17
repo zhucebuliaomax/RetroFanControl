@@ -8,7 +8,8 @@
     <string name="authorization_auto_start_enabled">Enabled; hardware profiles can resume after restart</string>
     <string name="authorization_auto_start_disabled">Disabled; the app will not start automatically after restart</string>
     <string name="authorization_profile_switch_toasts">Show profile switch toast</string>
-    <string name="authorization_profile_switch_toasts_summary">Show a system toast when opening games or apps with custom profiles.</string>
+    <string name="authorization_profile_switch_toasts_summary">Show a system toast when opening any app.</string>
+    <string name="authorization_profile_switch_toasts_custom_apps_only">Only when opening games or apps with custom profiles</string>
     <string name="authorization_root">Root access</string>
     <string name="authorization_root_granted">Root access granted</string>
     <string name="authorization_root_not_granted">Root access not granted, tap to refresh</string>
@@ -37,9 +38,6 @@
     <string name="authorization_dangerous">Dangerous</string>
     <string name="authorization_disable_thermal_protection">Disable thermal protection</string>
     <string name="authorization_disable_thermal_protection_footer">Disabling thermal protection stops CPU/GPU thermal throttling and emergency safeguards. Extreme heat may permanently damage the device. Use at your own risk.</string>
-    <string name="authorization_microphone">Microphone</string>
-    <string name="authorization_microphone_granted">Access granted for Music Reactive</string>
-    <string name="authorization_microphone_not_granted">Required by Music Reactive</string>
     <string name="authorization_screen_capture">Screen capture</string>
     <string name="authorization_screen_capture_summary">Grant a session for Ambilight</string>
 </resources>

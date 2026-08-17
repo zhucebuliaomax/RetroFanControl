@@ -17,7 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -53,7 +52,6 @@ import com.mmax.retrocontrol.data.GamepadButtonMapping
 import com.mmax.retrocontrol.data.GamepadTriggerMode
 import com.mmax.retrocontrol.designsystem.SecondaryMenuList
 import com.mmax.retrocontrol.designsystem.SecondaryMenuListItem
-import com.mmax.retrocontrol.designsystem.SwipeToDeleteSecondaryMenuListItem
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 import com.mmax.retrocontrol.designsystem.settingsSegmentedShapes
 
@@ -103,7 +101,6 @@ fun ButtonLayoutProfilesSection(
     SecondaryMenuList {
         profiles.forEachIndexed { index, profile ->
             key(profile.id) {
-                var showDelete by remember(profile.id) { mutableStateOf(false) }
                 val summary = stringResource(
                     R.string.button_layout_summary,
                     stringResource(profile.layout.labelRes),
@@ -111,48 +108,19 @@ fun ButtonLayoutProfilesSection(
                     stringResource(profile.m2.labelRes),
                     stringResource(profile.triggerMode.labelRes),
                 )
-                if (profile.isBuiltIn) {
-                    SecondaryMenuListItem(
-                        index = index,
-                        count = profiles.size,
-                        onClick = { onProfileSelected(profile.id) },
-                        trailingContent = {
-                            Icon(Icons.Default.ChevronRight, contentDescription = null)
-                        },
-                        modifier = profileModifier(index),
-                        supportingContent = { Text(summary) },
-                        content = {
-                            Text(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        },
-                    )
-                } else {
-                    SwipeToDeleteSecondaryMenuListItem(
-                        index = index,
-                        count = profiles.size,
-                        onClick = { onProfileSelected(profile.id) },
-                        onDeleteRequest = { showDelete = true },
-                        deleteIcon = Icons.Default.Delete,
-                        deleteContentDescription = stringResource(R.string.delete_button_layout),
-                        trailingContent = {
-                            Icon(Icons.Default.ChevronRight, contentDescription = null)
-                        },
-                        modifier = profileModifier(index),
-                        supportingContent = { Text(summary) },
-                        content = {
-                            Text(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        },
-                    )
-                }
-                if (showDelete) {
-                    DeleteButtonLayoutConfirmation(
-                        name = profile.name,
-                        onConfirm = {
-                            showDelete = false
-                            onDeleteProfile(profile.id)
-                        },
-                        onDismiss = { showDelete = false },
-                    )
-                }
+                SecondaryMenuListItem(
+                    index = index,
+                    count = profiles.size,
+                    onClick = { onProfileSelected(profile.id) },
+                    trailingContent = {
+                        Icon(Icons.Default.ChevronRight, contentDescription = null)
+                    },
+                    modifier = profileModifier(index).bringIntoViewOnFocus(),
+                    supportingContent = { Text(summary) },
+                    content = {
+                        Text(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    },
+                )
             }
         }
     }

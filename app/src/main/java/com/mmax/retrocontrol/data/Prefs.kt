@@ -43,6 +43,8 @@ object Prefs {
     const val AUTO_START_ENABLED = "auto_start_enabled"
     const val PROFILE_SWITCH_TOASTS_ENABLED =
         "profile_switch_notifications_enabled"
+    const val PROFILE_SWITCH_TOASTS_CUSTOM_APPS_ONLY =
+        "profile_switch_toasts_custom_apps_only"
     const val USB_THERMAL_CONTROL_ENABLED = "usb_thermal_control_enabled"
     const val USB_THERMAL_FAN_CURVE = "usb_thermal_fan_curve"
     const val USB_THERMAL_FAN_CURVE_DEFAULT = "usb_thermal_fan_curve_default"

@@ -77,6 +77,7 @@ data class DashboardState(
     val overlayEnabled: Boolean = false,
     val autoStartEnabled: Boolean = true,
     val profileSwitchToastsEnabled: Boolean = false,
+    val profileSwitchToastsCustomAppsOnly: Boolean = true,
     val usbThermalControl: UsbThermalFanControl = UsbThermalFanControl(),
     val thermalProtectionDisabled: Boolean = false,
     val installedApps: List<InstalledAppInfo> = emptyList(),
@@ -185,6 +186,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     Prefs.PROFILE_SWITCH_TOASTS_ENABLED,
                     false,
                 ),
+                profileSwitchToastsCustomAppsOnly = prefs.getBoolean(
+                    Prefs.PROFILE_SWITCH_TOASTS_ENABLED,
+                    false,
+                ) && prefs.getBoolean(Prefs.PROFILE_SWITCH_TOASTS_CUSTOM_APPS_ONLY, true),
                 usbThermalControl = UsbThermalFanCurvePreferences.load(prefs),
                 thermalProtectionDisabled = prefs.getBoolean(
                     Prefs.THERMAL_PROTECTION_DISABLED,
@@ -790,6 +795,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         settings.put("overlayEnabled", state.overlayEnabled)
         settings.put("autoStartEnabled", state.autoStartEnabled)
         settings.put("profileSwitchToastsEnabled", state.profileSwitchToastsEnabled)
+        settings.put(
+            "profileSwitchToastsCustomAppsOnly",
+            state.profileSwitchToastsCustomAppsOnly,
+        )
         settings.put("usbThermalControlEnabled", state.usbThermalControl.enabled)
         settings.put(
             "usbThermalFanCurve",
@@ -1031,6 +1040,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 this,
             )
             settings.copyBoolean(
+                "profileSwitchToastsCustomAppsOnly",
+                Prefs.PROFILE_SWITCH_TOASTS_CUSTOM_APPS_ONLY,
+                this,
+            )
+            if (settings.has("profileSwitchToastsEnabled")) {
+                val masterEnabled = settings.getBoolean("profileSwitchToastsEnabled")
+                putBoolean(
+                    Prefs.PROFILE_SWITCH_TOASTS_CUSTOM_APPS_ONLY,
+                    masterEnabled && settings.optBoolean(
+                        "profileSwitchToastsCustomAppsOnly",
+                        true,
+                    ),
+                )
+            }
+            settings.copyBoolean(
                 "thermalProtectionDisabled",
                 Prefs.THERMAL_PROTECTION_DISABLED,
                 this,
@@ -1084,8 +1108,22 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun setProfileSwitchToastsEnabled(enabled: Boolean) {
-        prefs.edit { putBoolean(Prefs.PROFILE_SWITCH_TOASTS_ENABLED, enabled) }
-        mutableState.update { it.copy(profileSwitchToastsEnabled = enabled) }
+        prefs.edit {
+            putBoolean(Prefs.PROFILE_SWITCH_TOASTS_ENABLED, enabled)
+            putBoolean(Prefs.PROFILE_SWITCH_TOASTS_CUSTOM_APPS_ONLY, enabled)
+        }
+        mutableState.update {
+            it.copy(
+                profileSwitchToastsEnabled = enabled,
+                profileSwitchToastsCustomAppsOnly = enabled,
+            )
+        }
+    }
+
+    fun setProfileSwitchToastsCustomAppsOnly(enabled: Boolean) {
+        if (!mutableState.value.profileSwitchToastsEnabled) return
+        prefs.edit { putBoolean(Prefs.PROFILE_SWITCH_TOASTS_CUSTOM_APPS_ONLY, enabled) }
+        mutableState.update { it.copy(profileSwitchToastsCustomAppsOnly = enabled) }
     }
 
     fun setUsbThermalControlEnabled(enabled: Boolean) {

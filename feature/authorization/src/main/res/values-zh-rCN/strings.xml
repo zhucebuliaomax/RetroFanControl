@@ -37,9 +37,6 @@
     <string name="authorization_dangerous">危险</string>
     <string name="authorization_disable_thermal_protection">关闭温控保护</string>
     <string name="authorization_disable_thermal_protection_footer">关闭温控保护会停止 CPU/GPU 过热降频和紧急保护。极端高温可能永久损坏设备，请自行承担风险。</string>
-    <string name="authorization_microphone">麦克风</string>
-    <string name="authorization_microphone_granted">已授权，可用于音乐律动</string>
-    <string name="authorization_microphone_not_granted">音乐律动需要此权限</string>
     <string name="authorization_screen_capture">屏幕捕获</string>
     <string name="authorization_screen_capture_summary">为环境光授予一次会话权限</string>
 </resources>

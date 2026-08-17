@@ -15,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -38,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,7 +51,6 @@ import com.mmax.retrocontrol.data.PerformanceProfileConfig
 import com.mmax.retrocontrol.data.displayName
 import com.mmax.retrocontrol.designsystem.SecondaryMenuList
 import com.mmax.retrocontrol.designsystem.SecondaryMenuListItem
-import com.mmax.retrocontrol.designsystem.SwipeToDeleteSecondaryMenuListItem
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 import java.util.Locale
 import kotlin.math.abs
@@ -74,36 +73,14 @@ fun PerformanceProfilesSection(
     }
     SecondaryMenuList {
         config.profiles.forEachIndexed { index, profile ->
-            if (profile.isEditable) {
-                key(profile.id) {
-                    SwipeToDeleteSecondaryMenuListItem(
-                        index = index,
-                        count = config.profiles.size,
-                        onClick = { onProfileSelected(profile.id) },
-                        onDeleteRequest = { onDeleteProfile(profile.id) },
-                        deleteIcon = Icons.Default.Delete,
-                        deleteContentDescription = stringResource(R.string.delete_performance_profile),
-                        trailingContent = {
-                            Icon(Icons.Default.ChevronRight, contentDescription = null)
-                        },
-                        supportingContent = {
-                            Text(profile.frequencySummary(config.policies))
-                        },
-                        modifier = profileModifier(index),
-                        content = {
-                            Text(
-                                text = profile.displayName(context),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
-                    )
-                }
-            } else {
+            key(profile.id) {
                 SecondaryMenuListItem(
                     index = index,
                     count = config.profiles.size,
                     onClick = { onProfileSelected(profile.id) },
+                    trailingContent = {
+                        Icon(Icons.Default.ChevronRight, contentDescription = null)
+                    },
                     supportingContent = { Text(profile.frequencySummary(config.policies)) },
                     modifier = profileModifier(index).bringIntoViewOnFocus(),
                     content = {
@@ -147,6 +124,8 @@ fun PerformanceProfileEditorDialog(
     var values by remember(profile.id, profile.maxFrequencies) {
         mutableStateOf(profile.maxFrequencies)
     }
+    var showRename by remember(profile.id) { mutableStateOf(false) }
+    var renameDraft by remember(profile.id, name) { mutableStateOf(name) }
     var showDelete by remember(profile.id) { mutableStateOf(false) }
 
     Dialog(
@@ -163,13 +142,25 @@ fun PerformanceProfileEditorDialog(
             Column(Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (profile.isEditable) {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it.take(40) },
-                            singleLine = true,
-                            label = { Text(stringResource(R.string.performance_profile_name)) },
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.headlineSmallEmphasized,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                         )
+                        IconButton(
+                            onClick = {
+                                renameDraft = name
+                                showRename = true
+                            },
+                            shapes = IconButtonDefaults.shapes(),
+                        ) {
+                            Icon(
+                                painterResource(R.drawable.ic_edit_square),
+                                contentDescription = stringResource(R.string.rename_performance_profile),
+                            )
+                        }
                         IconButton(
                             onClick = { showDelete = true },
                             shapes = IconButtonDefaults.shapes(),
@@ -225,6 +216,38 @@ fun PerformanceProfileEditorDialog(
                 }
             }
         }
+    }
+
+    if (showRename) {
+        AlertDialog(
+            onDismissRequest = { showRename = false },
+            title = { Text(stringResource(R.string.rename_performance_profile)) },
+            text = {
+                OutlinedTextField(
+                    value = renameDraft,
+                    onValueChange = { renameDraft = it.take(40) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.performance_profile_name)) },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        name = renameDraft.trim()
+                        showRename = false
+                    },
+                    enabled = renameDraft.isNotBlank(),
+                    shapes = ButtonDefaults.shapes(),
+                ) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showRename = false },
+                    shapes = ButtonDefaults.shapes(),
+                ) { Text(stringResource(R.string.cancel)) }
+            },
+        )
     }
 
     if (showDelete) {

@@ -76,7 +76,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.mmax.retrocontrol.designsystem.SecondaryMenuList
 import com.mmax.retrocontrol.designsystem.SecondaryMenuListItem
 import com.mmax.retrocontrol.designsystem.SettingsListDialog
-import com.mmax.retrocontrol.designsystem.SwipeToDeleteSecondaryMenuListItem
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 import kotlin.math.roundToInt
 
@@ -98,7 +97,6 @@ enum class JoystickRgbMode(
     AURORA(R.string.joystick_mode_aurora),
     OCEAN(R.string.joystick_mode_ocean),
     STARLIGHT(R.string.joystick_mode_starlight),
-    MUSIC(R.string.joystick_mode_music),
 }
 
 data class JoystickProfileUiState(
@@ -132,14 +130,10 @@ fun JoystickProfilesSection(
         )
         profiles.forEachIndexed { index, profile ->
             key(profile.id) {
-                var showDelete by remember(profile.id) { mutableStateOf(false) }
-                SwipeToDeleteSecondaryMenuListItem(
+                SecondaryMenuListItem(
                     index = index + 1,
                     count = count,
                     onClick = { onProfileSelected(profile.id) },
-                    onDeleteRequest = { showDelete = true },
-                    deleteIcon = Icons.Default.Delete,
-                    deleteContentDescription = stringResource(R.string.joystick_delete_profile),
                     trailingContent = {
                         Icon(Icons.Default.ChevronRight, contentDescription = null)
                     },
@@ -153,16 +147,6 @@ fun JoystickProfilesSection(
                         )
                     },
                 )
-                if (showDelete) {
-                    DeleteProfileConfirmation(
-                        name = profile.name,
-                        onConfirm = {
-                            showDelete = false
-                            onDeleteProfile(profile.id)
-                        },
-                        onDismiss = { showDelete = false },
-                    )
-                }
             }
         }
     }

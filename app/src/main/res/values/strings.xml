@@ -42,6 +42,7 @@
     <string name="performance_policies_unavailable">CPU frequency policies are unavailable. Grant root access and refresh.</string>
     <string name="performance_policy_number">cpufreq policy%1$d</string>
     <string name="performance_profile_name">Frequency profile name</string>
+    <string name="rename_performance_profile">Rename frequency profile</string>
     <string name="new_performance_profile">New frequency profile</string>
     <string name="add_performance_profile">Add frequency profile</string>
     <string name="delete_performance_profile">Delete frequency profile</string>

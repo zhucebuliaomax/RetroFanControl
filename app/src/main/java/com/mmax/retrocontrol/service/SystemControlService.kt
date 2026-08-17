@@ -1006,11 +1006,11 @@ class SystemControlService : Service() {
                 it.buttonLayoutId != null ||
                 it.performanceProfileId != null
         } == true
-        if (
-            !appIsGame &&
-            effectivePreset.isDefault &&
-            !hasCustomControl
-        ) {
+        val customAppsOnly = prefs.getBoolean(
+            Prefs.PROFILE_SWITCH_TOASTS_CUSTOM_APPS_ONLY,
+            true,
+        )
+        if (customAppsOnly && !appIsGame && effectivePreset.isDefault && !hasCustomControl) {
             return
         }
 

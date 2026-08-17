@@ -327,10 +327,12 @@ fun SettingsSegmentScope.SettingsPreferenceRow(
     leadingContent: (@Composable () -> Unit)? = null,
     containerColor: Color? = null,
     contentColor: Color? = null,
+    enabled: Boolean = true,
 ) {
     val resolvedContentColor = contentColor ?: MaterialTheme.colorScheme.onSurface
     SegmentedListItem(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
             .bringIntoViewOnFocus(),

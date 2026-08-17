@@ -896,6 +896,7 @@ fun DashboardScreen(
                     telemetryOverlayEnabled = state.overlayEnabled,
                     autoStartEnabled = state.autoStartEnabled,
                     profileSwitchToastsEnabled = state.profileSwitchToastsEnabled,
+                    profileSwitchToastsCustomAppsOnly = state.profileSwitchToastsCustomAppsOnly,
                     usbThermalControlEnabled = state.usbThermalControl.enabled,
                     thermalProtectionDisabled = state.thermalProtectionDisabled,
                     rootGranted = hasRoot,
@@ -925,6 +926,8 @@ fun DashboardScreen(
                     vm.setProfileSwitchToastsEnabled(enabled)
                     onProfileSwitchToastsEnabled(enabled)
                 },
+                onProfileSwitchToastsCustomAppsOnlyChange =
+                    vm::setProfileSwitchToastsCustomAppsOnly,
                 onUsbThermalControlEnabledChange = vm::setUsbThermalControlEnabled,
                 onUsbThermalFanCurveClick = { editingUsbThermalCurve = true },
                 onThermalProtectionDisabledChange = vm::setThermalProtectionDisabled,

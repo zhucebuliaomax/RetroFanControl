@@ -37,9 +37,6 @@
     <string name="authorization_dangerous">危険</string>
     <string name="authorization_disable_thermal_protection">温度保護を無効化</string>
     <string name="authorization_disable_thermal_protection_footer">温度保護を無効にすると、CPU/GPU のサーマルスロットリングと緊急保護が停止します。過度な高温によりデバイスが恒久的に損傷する可能性があります。自己責任で使用してください。</string>
-    <string name="authorization_microphone">マイク</string>
-    <string name="authorization_microphone_granted">音楽連動用に許可済み</string>
-    <string name="authorization_microphone_not_granted">音楽連動に必要です</string>
     <string name="authorization_screen_capture">画面キャプチャ</string>
     <string name="authorization_screen_capture_summary">アンビライト用のセッションを許可</string>
 </resources>
