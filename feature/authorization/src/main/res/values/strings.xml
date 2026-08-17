@@ -8,8 +8,7 @@
     <string name="authorization_auto_start_enabled">Enabled; hardware profiles can resume after restart</string>
     <string name="authorization_auto_start_disabled">Disabled; the app will not start automatically after restart</string>
     <string name="authorization_profile_switch_toasts">Show profile switch toast</string>
-    <string name="authorization_profile_switch_toasts_summary">Show a system toast when opening any app.</string>
-    <string name="authorization_profile_switch_toasts_custom_apps_only">Only when opening games or apps with custom profiles</string>
+    <string name="authorization_profile_switch_toasts_summary">Show a system toast when opening games or apps with custom profiles.</string>
     <string name="authorization_root">Root access</string>
     <string name="authorization_root_granted">Root access granted</string>
     <string name="authorization_root_not_granted">Root access not granted, tap to refresh</string>

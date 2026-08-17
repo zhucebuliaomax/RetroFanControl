@@ -49,7 +49,6 @@ data class AuthorizationUiState(
     val telemetryOverlayEnabled: Boolean,
     val autoStartEnabled: Boolean,
     val profileSwitchToastsEnabled: Boolean,
-    val profileSwitchToastsCustomAppsOnly: Boolean,
     val usbThermalControlEnabled: Boolean,
     val thermalProtectionDisabled: Boolean,
     val rootGranted: Boolean,
@@ -69,7 +68,6 @@ fun AuthorizationManagementSection(
     onTelemetryOverlayEnabledChange: (Boolean) -> Unit,
     onAutoStartEnabledChange: (Boolean) -> Unit,
     onProfileSwitchToastsEnabledChange: (Boolean) -> Unit,
-    onProfileSwitchToastsCustomAppsOnlyChange: (Boolean) -> Unit,
     onUsbThermalControlEnabledChange: (Boolean) -> Unit,
     onUsbThermalFanCurveClick: () -> Unit,
     onThermalProtectionDisabledChange: (Boolean) -> Unit,
@@ -101,7 +99,7 @@ fun AuthorizationManagementSection(
     SettingsSegmentGroup(modifier) {
         SettingsPreferenceRow(
             index = 0,
-            count = 3,
+            count = 2,
             title = stringResource(R.string.authorization_auto_start),
             onClick = { onAutoStartEnabledChange(!state.autoStartEnabled) },
             modifier = autoStartModifier,
@@ -215,29 +213,7 @@ fun AuthorizationManagementSection(
         )
         SettingsPreferenceRow(
             index = 1,
-            count = 3,
-            title = stringResource(R.string.authorization_profile_switch_toasts_custom_apps_only),
-            onClick = {
-                if (state.profileSwitchToastsEnabled) {
-                    onProfileSwitchToastsCustomAppsOnlyChange(
-                        !state.profileSwitchToastsCustomAppsOnly
-                    )
-                }
-            },
-            enabled = state.profileSwitchToastsEnabled,
-            trailingContent = {
-                Switch(
-                    checked = state.profileSwitchToastsEnabled &&
-                        state.profileSwitchToastsCustomAppsOnly,
-                    onCheckedChange = onProfileSwitchToastsCustomAppsOnlyChange,
-                    enabled = state.profileSwitchToastsEnabled,
-                    modifier = Modifier.focusProperties { canFocus = false },
-                )
-            },
-        )
-        SettingsPreferenceRow(
-            index = 2,
-            count = 3,
+            count = 2,
             title = stringResource(R.string.authorization_notifications),
             summary = stringResource(
                 if (state.notificationsEnabled) {
