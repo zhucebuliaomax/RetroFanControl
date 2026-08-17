@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
@@ -280,6 +281,16 @@ private fun OverlayContent(
                 )
             }
             if (displayMode == OverlayDisplayMode.FREQUENCY_CONTROL) {
+                Text(
+                    text = telemetry.frequency.activeProfileName,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFFFFB000),
+                    fontSize = 9.5.sp,
+                    lineHeight = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Spacer(Modifier.height(4.dp))
                 overlayCoreGroups.forEach { group ->
                     val policy = telemetry.frequency.policies.policyFor(group.cpuIds)
