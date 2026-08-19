@@ -53,6 +53,7 @@ import com.mmax.retrocontrol.designsystem.SettingsSegmentGroup
 import com.mmax.retrocontrol.designsystem.SettingsSectionTitle
 import com.mmax.retrocontrol.designsystem.SettingsTokens
 import com.mmax.retrocontrol.designsystem.SettingsStandaloneFooterText
+import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 import com.mmax.retrocontrol.designsystem.settingsSegmentedShapes
 import kotlin.math.roundToInt
 
@@ -111,7 +112,10 @@ fun AuthorizationManagementSection(
     overlayModifier: Modifier = Modifier,
     notificationsModifier: Modifier = Modifier,
     preserveBypassChargingModifier: Modifier = Modifier,
+    chargingThresholdModifier: Modifier = Modifier,
+    ambilightModifier: Modifier = Modifier,
     usbThermalModifier: Modifier = Modifier,
+    usbThermalFanCurveModifier: Modifier = Modifier,
     thermalProtectionModifier: Modifier = Modifier,
     exportDataModifier: Modifier = Modifier,
     importDataModifier: Modifier = Modifier,
@@ -218,7 +222,9 @@ fun AuthorizationManagementSection(
                     valueRange = CHARGING_THRESHOLD_MIN.toFloat()..
                         CHARGING_THRESHOLD_MAX.toFloat(),
                     steps = CHARGING_THRESHOLD_STEP_COUNT,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = chargingThresholdModifier
+                        .fillMaxWidth()
+                        .bringIntoViewOnFocus(),
                 )
             }
         }
@@ -324,6 +330,7 @@ fun AuthorizationManagementSection(
                 }
             ),
             onClick = { showAmbilightLayoutDialog = true },
+            modifier = ambilightModifier,
             trailingIcon = Icons.Default.ChevronRight,
         )
     }
@@ -382,6 +389,7 @@ fun AuthorizationManagementSection(
                 count = itemCount,
                 title = stringResource(R.string.authorization_usb_thermal_fan_curve),
                 onClick = onUsbThermalFanCurveClick,
+                modifier = usbThermalFanCurveModifier,
                 trailingIcon = Icons.Default.ChevronRight,
             )
         }

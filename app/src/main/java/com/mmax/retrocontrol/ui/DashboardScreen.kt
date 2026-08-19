@@ -289,7 +289,7 @@ fun DashboardScreen(
     }
     val addPresetFocusRequester = remember { FocusRequester() }
     val appFocusRequester = remember { FocusRequester() }
-    val authorizationFocusRequesters = remember { List(14) { FocusRequester() } }
+    val authorizationFocusRequesters = remember { List(17) { FocusRequester() } }
     val githubFocusRequester = remember { FocusRequester() }
     val navigationFocusRequesters = remember {
         List(DashboardDestination.entries.size) { FocusRequester() }
@@ -966,19 +966,11 @@ fun DashboardScreen(
                     .focusRequester(authorizationFocusRequesters[2])
                     .focusProperties {
                         up = authorizationFocusRequesters[1]
-                        down = authorizationFocusRequesters[13]
-                        left = FocusRequester.Default
-                        right = FocusRequester.Default
-                    },
-                preserveBypassChargingModifier = Modifier
-                    .focusRequester(authorizationFocusRequesters[13])
-                    .focusProperties {
-                        up = authorizationFocusRequesters[2]
                         down = authorizationFocusRequesters[3]
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
-                telemetryOverlayModifier = Modifier
+                preserveBypassChargingModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[3])
                     .focusProperties {
                         up = authorizationFocusRequesters[2]
@@ -986,15 +978,13 @@ fun DashboardScreen(
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
-                overlayModifier = Modifier
+                chargingThresholdModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[4])
                     .focusProperties {
                         up = authorizationFocusRequesters[3]
                         down = authorizationFocusRequesters[5]
-                        left = FocusRequester.Default
-                        right = FocusRequester.Default
                     },
-                appInfoModifier = Modifier
+                telemetryOverlayModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[5])
                     .focusProperties {
                         up = authorizationFocusRequesters[4]
@@ -1002,7 +992,7 @@ fun DashboardScreen(
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
-                profileSwitchToastsModifier = Modifier
+                overlayModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[6])
                     .focusProperties {
                         up = authorizationFocusRequesters[5]
@@ -1010,7 +1000,7 @@ fun DashboardScreen(
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
-                notificationsModifier = Modifier
+                appInfoModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[7])
                     .focusProperties {
                         up = authorizationFocusRequesters[6]
@@ -1018,23 +1008,7 @@ fun DashboardScreen(
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
-                usbThermalModifier = Modifier
-                    .focusRequester(authorizationFocusRequesters[11])
-                    .focusProperties {
-                        up = authorizationFocusRequesters[10]
-                        down = authorizationFocusRequesters[12]
-                        left = FocusRequester.Default
-                        right = FocusRequester.Default
-                    },
-                thermalProtectionModifier = Modifier
-                    .focusRequester(authorizationFocusRequesters[12])
-                    .focusProperties {
-                        up = authorizationFocusRequesters[11]
-                        down = githubFocusRequester
-                        left = FocusRequester.Default
-                        right = FocusRequester.Default
-                    },
-                exportDataModifier = Modifier
+                profileSwitchToastsModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[8])
                     .focusProperties {
                         up = authorizationFocusRequesters[7]
@@ -1042,7 +1016,7 @@ fun DashboardScreen(
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
-                importDataModifier = Modifier
+                notificationsModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[9])
                     .focusProperties {
                         up = authorizationFocusRequesters[8]
@@ -1050,11 +1024,67 @@ fun DashboardScreen(
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
-                resetDataModifier = Modifier
+                ambilightModifier = Modifier
                     .focusRequester(authorizationFocusRequesters[10])
                     .focusProperties {
                         up = authorizationFocusRequesters[9]
                         down = authorizationFocusRequesters[11]
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                usbThermalModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[11])
+                    .focusProperties {
+                        up = authorizationFocusRequesters[10]
+                        down = if (state.usbThermalControl.enabled) {
+                            authorizationFocusRequesters[12]
+                        } else {
+                            authorizationFocusRequesters[13]
+                        }
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                usbThermalFanCurveModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[12])
+                    .focusProperties {
+                        up = authorizationFocusRequesters[11]
+                        down = authorizationFocusRequesters[13]
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                exportDataModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[13])
+                    .focusProperties {
+                        up = if (state.usbThermalControl.enabled) {
+                            authorizationFocusRequesters[12]
+                        } else {
+                            authorizationFocusRequesters[11]
+                        }
+                        down = authorizationFocusRequesters[14]
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                importDataModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[14])
+                    .focusProperties {
+                        up = authorizationFocusRequesters[13]
+                        down = authorizationFocusRequesters[15]
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                resetDataModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[15])
+                    .focusProperties {
+                        up = authorizationFocusRequesters[14]
+                        down = authorizationFocusRequesters[16]
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                thermalProtectionModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[16])
+                    .focusProperties {
+                        up = authorizationFocusRequesters[15]
+                        down = githubFocusRequester
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
@@ -1065,7 +1095,7 @@ fun DashboardScreen(
                 linkModifier = Modifier
                     .focusRequester(githubFocusRequester)
                     .focusProperties {
-                        up = authorizationFocusRequesters[12]
+                        up = authorizationFocusRequesters[16]
                         down = FocusRequester.Default
                         left = FocusRequester.Default
                         right = FocusRequester.Default
