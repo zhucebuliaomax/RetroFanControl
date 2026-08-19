@@ -7,7 +7,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
-const val DEFAULT_JOYSTICK_BRIGHTNESS = 64
+const val DEFAULT_JOYSTICK_BRIGHTNESS = 42
 
 data class JoystickProfile(
     val id: String,
