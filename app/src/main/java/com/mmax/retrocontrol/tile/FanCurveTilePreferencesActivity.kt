@@ -52,6 +52,7 @@ import com.mmax.retrocontrol.data.ButtonLayoutTilePreferences
 import com.mmax.retrocontrol.data.FanSelectionPreferences
 import com.mmax.retrocontrol.data.FanSelectionSource
 import com.mmax.retrocontrol.data.Prefs
+import com.mmax.retrocontrol.data.ChargingControlPreferences
 import com.mmax.retrocontrol.data.JoystickProfilePreferences
 import com.mmax.retrocontrol.data.JoystickSelectionPreferences
 import com.mmax.retrocontrol.data.JoystickSelectionSource
@@ -60,6 +61,7 @@ import com.mmax.retrocontrol.data.PerformanceProfilePreferences
 import com.mmax.retrocontrol.data.PerformanceTilePreferences
 import com.mmax.retrocontrol.data.displayName
 import com.mmax.retrocontrol.hardware.CpuFrequencyController
+import com.mmax.retrocontrol.hardware.BatteryConnectionReader
 import com.mmax.retrocontrol.service.SystemControlService
 import com.mmax.retrocontrol.theme.RetroControlTheme
 import kotlin.math.roundToInt
@@ -85,6 +87,11 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         window.setGravity(Gravity.CENTER)
         setFinishOnTouchOutside(true)
+
+        if (originatingTile()?.className == ChargingQuickSettingsTile::class.java.name) {
+            showChargingThresholdDialog()
+            return
+        }
 
         if (originatingTile()?.className == AmbilightQuickSettingsTile::class.java.name) {
             showAmbilightBrightnessDialog()
@@ -339,6 +346,72 @@ class FanCurveTilePreferencesActivity : ComponentActivity() {
         super.finish()
         @Suppress("DEPRECATION")
         overridePendingTransition(0, 0)
+    }
+
+    private fun showChargingThresholdDialog() {
+        val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
+        setContent {
+            RetroControlTheme {
+                var threshold by remember {
+                    mutableIntStateOf(ChargingControlPreferences.load(prefs).threshold)
+                }
+                Surface(
+                    modifier = Modifier.width(360.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Column(Modifier.padding(24.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = stringResource(R.string.charging_threshold_title),
+                                style = MaterialTheme.typography.titleLargeEmphasized,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = "$threshold%",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Slider(
+                            value = threshold.toFloat(),
+                            onValueChange = { value ->
+                                threshold = ChargingControlPreferences.normalizeThreshold(
+                                    value.roundToInt()
+                                )
+                            },
+                            onValueChangeFinished = {
+                                ChargingControlPreferences.setThresholdAndSelect(prefs, threshold)
+                                ChargingQuickSettingsTile.requestRefresh(this@FanCurveTilePreferencesActivity)
+                                if (BatteryConnectionReader.read(this@FanCurveTilePreferencesActivity).powerConnected) {
+                                    RootAccessManager.ensureRoot { granted ->
+                                        if (granted) {
+                                            SystemControlService.updateChargingControl(
+                                                applicationContext
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            valueRange = ChargingControlPreferences.MIN_THRESHOLD.toFloat()..
+                                ChargingControlPreferences.MAX_THRESHOLD.toFloat(),
+                            steps = 9,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            TextButton(
+                                onClick = { finish() },
+                                shapes = ButtonDefaults.shapes(),
+                            ) { Text(stringResource(R.string.close)) }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun originatingTile(): ComponentName? =

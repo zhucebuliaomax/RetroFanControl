@@ -35,6 +35,7 @@ import com.mmax.retrocontrol.data.PerformanceProfileConfig
 import com.mmax.retrocontrol.data.PerformanceProfilePreferences
 import com.mmax.retrocontrol.data.PerformanceTilePreferences
 import com.mmax.retrocontrol.data.Prefs
+import com.mmax.retrocontrol.data.ChargingControlPreferences
 import com.mmax.retrocontrol.data.UsbThermalFanControl
 import com.mmax.retrocontrol.data.UsbThermalFanCurvePreferences
 import com.mmax.retrocontrol.data.JoystickProfileCatalog
@@ -46,6 +47,7 @@ import com.mmax.retrocontrol.feature.joystick.JoystickRgbMode
 import com.mmax.retrocontrol.hardware.TelemetryRepository
 import com.mmax.retrocontrol.hardware.TelemetrySnapshot
 import com.mmax.retrocontrol.hardware.CpuFrequencyController
+import com.mmax.retrocontrol.hardware.BatteryConnectionReader
 import com.mmax.retrocontrol.service.SystemControlService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -81,6 +83,8 @@ data class DashboardState(
     val usbThermalControl: UsbThermalFanControl = UsbThermalFanControl(),
     val thermalProtectionDisabled: Boolean = false,
     val ambilightLeftStickLower: Boolean = false,
+    val preserveBypassCharging: Boolean = false,
+    val chargingThreshold: Int = ChargingControlPreferences.DEFAULT_THRESHOLD,
     val installedApps: List<InstalledAppInfo> = emptyList(),
     val appProfiles: Map<String, AppControlProfile> = emptyMap(),
     val telemetry: TelemetrySnapshot = TelemetrySnapshot(),
@@ -194,6 +198,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 ),
                 ambilightLeftStickLower = AmbilightPreferences.leftStickLayout(prefs) ==
                     AmbilightPreferences.LeftStickLayout.LOWER,
+                preserveBypassCharging = ChargingControlPreferences.isPreserveEnabled(prefs),
+                chargingThreshold = ChargingControlPreferences.load(prefs).threshold,
             )
         }
     }
@@ -804,6 +810,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             FanCurveSerializer.serialize(state.usbThermalControl.profile.defaultPoints),
         )
         settings.put("thermalProtectionDisabled", state.thermalProtectionDisabled)
+        settings.put("preserveBypassCharging", state.preserveBypassCharging)
+        settings.put("chargingThreshold", ChargingControlPreferences.load(prefs).threshold)
         settings.put("overlayX", prefs.getInt(Prefs.OVERLAY_X, 100))
         settings.put("overlayY", prefs.getInt(Prefs.OVERLAY_Y, 100))
 
@@ -1039,6 +1047,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 Prefs.THERMAL_PROTECTION_DISABLED,
                 this,
             )
+            settings.copyBoolean(
+                "preserveBypassCharging",
+                Prefs.PRESERVE_BYPASS_CHARGING,
+                this,
+            )
+            if (settings.has("chargingThreshold")) {
+                putInt(
+                    Prefs.CHARGING_THRESHOLD,
+                    ChargingControlPreferences.normalizeThreshold(
+                        settings.getInt("chargingThreshold")
+                    ),
+                )
+            }
             if (settings.has("overlayX")) putInt(Prefs.OVERLAY_X, settings.getInt("overlayX"))
             if (settings.has("overlayY")) putInt(Prefs.OVERLAY_Y, settings.getInt("overlayY"))
         }
@@ -1100,6 +1121,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun setProfileSwitchToastsEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(Prefs.PROFILE_SWITCH_TOASTS_ENABLED, enabled) }
         mutableState.update { it.copy(profileSwitchToastsEnabled = enabled) }
+    }
+
+    fun setPreserveBypassCharging(enabled: Boolean) {
+        ChargingControlPreferences.setPreserveEnabled(prefs, enabled)
+        if (enabled && BatteryConnectionReader.read(getApplication()).powerConnected) {
+            ChargingControlPreferences.beginPreservedSession(prefs)
+        }
+        mutableState.update { it.copy(preserveBypassCharging = enabled) }
+        SystemControlService.updateChargingControl(getApplication())
+    }
+
+    fun setChargingThreshold(threshold: Int) {
+        val state = ChargingControlPreferences.setThresholdAndSelect(prefs, threshold)
+        mutableState.update { it.copy(chargingThreshold = state.threshold) }
+        SystemControlService.updateChargingControl(getApplication())
     }
 
     fun setUsbThermalControlEnabled(enabled: Boolean) {

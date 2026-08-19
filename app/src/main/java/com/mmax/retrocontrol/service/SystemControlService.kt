@@ -36,6 +36,9 @@ import com.mmax.retrocontrol.data.PerformanceTilePreferences
 import com.mmax.retrocontrol.data.PerformanceProfile
 import com.mmax.retrocontrol.data.PresetPreferences
 import com.mmax.retrocontrol.data.Prefs
+import com.mmax.retrocontrol.data.ChargingConnectionAction
+import com.mmax.retrocontrol.data.ChargingConnectionLogic
+import com.mmax.retrocontrol.data.ChargingControlPreferences
 import com.mmax.retrocontrol.data.UsbThermalFanControl
 import com.mmax.retrocontrol.data.UsbThermalFanCurvePreferences
 import com.mmax.retrocontrol.data.JoystickProfile
@@ -59,6 +62,9 @@ import com.mmax.retrocontrol.tile.OverlayTileService
 import com.mmax.retrocontrol.tile.JoystickQuickSettingsTile
 import com.mmax.retrocontrol.tile.PerformanceQuickSettingsTile
 import com.mmax.retrocontrol.tile.ButtonLayoutQuickSettingsTile
+import com.mmax.retrocontrol.tile.ChargingQuickSettingsTile
+import com.mmax.retrocontrol.hardware.BatteryConnectionReader
+import com.mmax.retrocontrol.hardware.BatteryConnectionState
 import com.mmax.retrocontrol.util.formatTemperature
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -73,8 +79,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.math.abs
 
 /**
- * The foreground service owns fan, gamepad, joystick RGB, and CPU frequency-profile writes
- * plus telemetry polling.
+ * The foreground service owns fan, gamepad, joystick RGB, charging control, and CPU
+ * frequency-profile writes plus telemetry polling.
  *
  * CPU writes are limited to cpufreq policy minimum/maximum nodes. It never changes
  * governors, GPU settings, refresh-rate settings, thermal-zone modes, or kernel
@@ -88,6 +94,8 @@ class SystemControlService : Service() {
         const val CHANNEL_ID = "fan_control"
         private const val NOTIFICATION_ID = 1
         const val ACTION_UPDATE = "com.mmax.retrocontrol.UPDATE"
+        private const val ACTION_UPDATE_CHARGING =
+            "com.mmax.retrocontrol.UPDATE_CHARGING"
         const val ACTION_SET_PROJECTION_INTENT =
             "com.mmax.retrocontrol.SET_PROJECTION_INTENT"
         private const val ACTION_PREVIEW_JOYSTICK_PROFILE =
@@ -105,6 +113,13 @@ class SystemControlService : Service() {
         fun startOrUpdate(context: Context) {
             context.startForegroundService(
                 Intent(context, SystemControlService::class.java).setAction(ACTION_UPDATE)
+            )
+        }
+
+        /** Applies charging preferences without reloading any other hardware configuration. */
+        fun updateChargingControl(context: Context) {
+            context.startForegroundService(
+                Intent(context, SystemControlService::class.java).setAction(ACTION_UPDATE_CHARGING)
             )
         }
 
@@ -147,12 +162,15 @@ class SystemControlService : Service() {
     private var screenOffJob: Job? = null
     private var performanceJob: Job? = null
     private var buttonLayoutJob: Job? = null
+    private var chargingJob: Job? = null
     private var profileSwitchToast: Toast? = null
     private val overlayAdjustmentMutex = Mutex()
     private var overlay: TelemetryOverlay? = null
     private lateinit var joystickEffects: JoystickEffectEngine
     private var lastNotificationUpdateMs = 0L
     private var screenReceiverRegistered = false
+    private var chargingReceiverRegistered = false
+    private var lastChargingPowerConnected = false
 
     @Volatile
     private var foregroundPackageName: String? = null
@@ -211,6 +229,30 @@ class SystemControlService : Service() {
                     joystickEffects.resumeAfterScreenOn()
                 }
             }
+        }
+    }
+
+    private val chargingReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != Intent.ACTION_BATTERY_CHANGED) return
+            val battery = BatteryConnectionReader.read(applicationContext)
+            val action = ChargingConnectionLogic.action(
+                wasConnected = lastChargingPowerConnected,
+                isConnected = battery.powerConnected,
+                preserveEnabled = ChargingControlPreferences.isPreserveEnabled(prefs),
+            )
+            lastChargingPowerConnected = battery.powerConnected
+            when (action) {
+                ChargingConnectionAction.NONE -> Unit
+                ChargingConnectionAction.RESET_TO_NORMAL -> {
+                    ChargingControlPreferences.resetSession(prefs)
+                }
+                ChargingConnectionAction.BEGIN_PRESERVED_SESSION -> {
+                    ChargingControlPreferences.beginPreservedSession(prefs)
+                }
+            }
+            applyChargingControl(battery)
+            ChargingQuickSettingsTile.requestRefresh(applicationContext)
         }
     }
 
@@ -280,6 +322,18 @@ class SystemControlService : Service() {
             Prefs.AMBILIGHT_LEFT_STICK_LAYOUT -> joystickEffects.setAmbilightLeftStickLayout(
                 AmbilightPreferences.leftStickLayout(prefs)
             )
+            Prefs.CHARGING_MODE,
+            Prefs.CHARGING_THRESHOLD -> applyChargingControl()
+            Prefs.PRESERVE_BYPASS_CHARGING -> {
+                if (
+                    ChargingControlPreferences.isPreserveEnabled(prefs) &&
+                    BatteryConnectionReader.read(this).powerConnected
+                ) {
+                    ChargingControlPreferences.beginPreservedSession(prefs)
+                }
+                applyChargingControl()
+                ChargingQuickSettingsTile.requestRefresh(applicationContext)
+            }
             Prefs.OVERLAY_ENABLED -> {
                 loadOverlayPreference()
                 applyOverlayState()
@@ -307,6 +361,14 @@ class SystemControlService : Service() {
             ContextCompat.RECEIVER_EXPORTED,
         )
         screenReceiverRegistered = true
+        lastChargingPowerConnected = BatteryConnectionReader.read(this).powerConnected
+        ContextCompat.registerReceiver(
+            this,
+            chargingReceiver,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED),
+            ContextCompat.RECEIVER_EXPORTED,
+        )
+        chargingReceiverRegistered = true
 
         startOrdinaryForeground()
         loadUsbThermalPreferences()
@@ -323,6 +385,8 @@ class SystemControlService : Service() {
         PerformanceQuickSettingsTile.requestRefresh(applicationContext)
         ButtonLayoutQuickSettingsTile.requestRefresh(applicationContext)
         OverlayTileService.requestRefresh(applicationContext)
+        ChargingQuickSettingsTile.requestRefresh(applicationContext)
+        applyChargingControl()
         if (!getSystemService(PowerManager::class.java).isInteractive) {
             scheduleScreenOffSuspend()
             joystickEffects.suspendForScreenOff()
@@ -336,7 +400,9 @@ class SystemControlService : Service() {
                 loadJoystickPreferences(force = true)
                 applyButtonLayout(force = true)
                 applyPerformanceProfile(force = true)
+                applyChargingControl()
             }
+            ACTION_UPDATE_CHARGING -> applyChargingControl()
             ACTION_SET_PROJECTION_INTENT -> {
                 val token = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getParcelableExtra(EXTRA_PROJECTION_INTENT, Intent::class.java)
@@ -375,11 +441,16 @@ class SystemControlService : Service() {
             unregisterReceiver(screenReceiver)
             screenReceiverRegistered = false
         }
+        if (chargingReceiverRegistered) {
+            unregisterReceiver(chargingReceiver)
+            chargingReceiverRegistered = false
+        }
         screenOffJob?.cancel()
         foregroundJob?.cancel()
         fanJob?.cancel()
         performanceJob?.cancel()
         buttonLayoutJob?.cancel()
+        chargingJob?.cancel()
         profileSwitchToast?.cancel()
         profileSwitchToast = null
         overlay?.hide()
@@ -427,6 +498,14 @@ class SystemControlService : Service() {
 
     private fun loadOverlayPreference() {
         overlayEnabled = prefs.getBoolean(Prefs.OVERLAY_ENABLED, false)
+    }
+
+    private fun applyChargingControl(batteryOverride: BatteryConnectionState? = null) {
+        chargingJob?.cancel()
+        chargingJob = scope.launch {
+            ChargingControlCoordinator.apply(applicationContext, prefs, batteryOverride)
+            ChargingQuickSettingsTile.requestRefresh(applicationContext)
+        }
     }
 
     private fun applyKernelThermalPreferences() {

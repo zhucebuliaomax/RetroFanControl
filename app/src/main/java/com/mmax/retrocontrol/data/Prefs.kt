@@ -29,6 +29,10 @@ object Prefs {
     const val PERFORMANCE_TILE_PROFILE = "performance_tile_profile"
     const val LAST_APPLIED_PERFORMANCE_PROFILE = "last_applied_performance_profile"
     const val CURRENT_FOREGROUND_APP = "current_foreground_app"
+    const val CHARGING_MODE = "charging_mode"
+    const val CHARGING_THRESHOLD = "charging_threshold"
+    const val CHARGING_THRESHOLD_REACHED = "charging_threshold_reached"
+    const val PRESERVE_BYPASS_CHARGING = "preserve_bypass_charging"
 
     // Version 1 migration keys.
     const val FAN_CURVE_QUIET = "fan_curve_quiet"

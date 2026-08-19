@@ -9,6 +9,10 @@
     <string name="authorization_auto_start_disabled">Disabled; the app will not start automatically after restart</string>
     <string name="authorization_profile_switch_toasts">Show profile switch toast</string>
     <string name="authorization_profile_switch_toasts_summary">Show a system toast when opening games or apps with custom profiles.</string>
+    <string name="authorization_preserve_bypass_charging">Preserve bypass charging</string>
+    <string name="authorization_preserve_bypass_charging_summary">Use the saved charge threshold automatically whenever external power is connected.</string>
+    <string name="authorization_charging_threshold">Bypass charging threshold</string>
+    <string name="authorization_charging_threshold_value">%1$d%%</string>
     <string name="authorization_root">Root access</string>
     <string name="authorization_root_granted">Root access granted</string>
     <string name="authorization_root_not_granted">Root access not granted, tap to refresh</string>

@@ -1,6 +1,9 @@
 package com.mmax.retrocontrol.feature.authorization
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,11 +21,17 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.res.stringResource
@@ -44,6 +53,14 @@ import com.mmax.retrocontrol.designsystem.SettingsSegmentGroup
 import com.mmax.retrocontrol.designsystem.SettingsSectionTitle
 import com.mmax.retrocontrol.designsystem.SettingsTokens
 import com.mmax.retrocontrol.designsystem.SettingsStandaloneFooterText
+import com.mmax.retrocontrol.designsystem.settingsSegmentedShapes
+import kotlin.math.roundToInt
+
+private const val CHARGING_THRESHOLD_MIN = 50
+private const val CHARGING_THRESHOLD_MAX = 100
+private const val CHARGING_THRESHOLD_STEP = 5
+private const val CHARGING_THRESHOLD_STEP_COUNT =
+    (CHARGING_THRESHOLD_MAX - CHARGING_THRESHOLD_MIN) / CHARGING_THRESHOLD_STEP - 1
 
 data class AuthorizationUiState(
     val telemetryOverlayEnabled: Boolean,
@@ -55,6 +72,8 @@ data class AuthorizationUiState(
     val overlayPermissionGranted: Boolean,
     val notificationsEnabled: Boolean,
     val ambilightLeftStickLower: Boolean,
+    val preserveBypassCharging: Boolean,
+    val chargingThreshold: Int,
 )
 
 /**
@@ -77,6 +96,8 @@ fun AuthorizationManagementSection(
     onOpenOverlaySettings: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onAmbilightLeftStickLowerChange: (Boolean) -> Unit,
+    onPreserveBypassChargingChange: (Boolean) -> Unit,
+    onChargingThresholdChange: (Int) -> Unit,
     onExportData: () -> Unit,
     onImportData: () -> Unit,
     onResetData: () -> Unit,
@@ -89,6 +110,7 @@ fun AuthorizationManagementSection(
     appInfoModifier: Modifier = Modifier,
     overlayModifier: Modifier = Modifier,
     notificationsModifier: Modifier = Modifier,
+    preserveBypassChargingModifier: Modifier = Modifier,
     usbThermalModifier: Modifier = Modifier,
     thermalProtectionModifier: Modifier = Modifier,
     exportDataModifier: Modifier = Modifier,
@@ -96,6 +118,10 @@ fun AuthorizationManagementSection(
     resetDataModifier: Modifier = Modifier,
 ) {
     var showAmbilightLayoutDialog by remember { mutableStateOf(false) }
+    var chargingThreshold by remember { mutableIntStateOf(state.chargingThreshold) }
+    LaunchedEffect(state.chargingThreshold) {
+        chargingThreshold = state.chargingThreshold
+    }
     SettingsSegmentGroup(modifier) {
         SettingsPreferenceRow(
             index = 0,
@@ -139,6 +165,63 @@ fun AuthorizationManagementSection(
             modifier = kernelSuModifier,
             trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
         )
+    }
+    Spacer(Modifier.height(20.dp))
+    SettingsSegmentGroup {
+        SettingsPreferenceRow(
+            index = 0,
+            count = 2,
+            title = stringResource(R.string.authorization_preserve_bypass_charging),
+            summary = stringResource(R.string.authorization_preserve_bypass_charging_summary),
+            onClick = {
+                onPreserveBypassChargingChange(!state.preserveBypassCharging)
+            },
+            modifier = preserveBypassChargingModifier,
+            trailingContent = {
+                Switch(
+                    checked = state.preserveBypassCharging,
+                    onCheckedChange = onPreserveBypassChargingChange,
+                    modifier = Modifier.focusProperties { canFocus = false },
+                )
+            },
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = settingsSegmentedShapes(index = 1, count = 2).shape,
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        ) {
+            Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.authorization_charging_threshold),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.authorization_charging_threshold_value,
+                            chargingThreshold,
+                        ),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Slider(
+                    value = chargingThreshold.toFloat(),
+                    onValueChange = { value ->
+                        chargingThreshold = (value / CHARGING_THRESHOLD_STEP).roundToInt()
+                            .times(CHARGING_THRESHOLD_STEP)
+                            .coerceIn(CHARGING_THRESHOLD_MIN, CHARGING_THRESHOLD_MAX)
+                    },
+                    onValueChangeFinished = {
+                        onChargingThresholdChange(chargingThreshold)
+                    },
+                    valueRange = CHARGING_THRESHOLD_MIN.toFloat()..
+                        CHARGING_THRESHOLD_MAX.toFloat(),
+                    steps = CHARGING_THRESHOLD_STEP_COUNT,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
     }
     Spacer(Modifier.height(20.dp))
     SettingsSegmentGroup {

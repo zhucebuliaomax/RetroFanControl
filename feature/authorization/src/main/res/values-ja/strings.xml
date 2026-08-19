@@ -13,6 +13,10 @@
     <string name="authorization_auto_start_disabled">無効、再起動後にアプリを自動起動しません</string>
     <string name="authorization_profile_switch_toasts">プロファイル切替時にトーストを表示</string>
     <string name="authorization_profile_switch_toasts_summary">ゲームまたはカスタムプロファイルを使用するアプリを開いたときにシステムトーストを表示します。</string>
+    <string name="authorization_preserve_bypass_charging">バイパス給電を保持</string>
+    <string name="authorization_preserve_bypass_charging_summary">外部電源接続時に保存済みの充電しきい値を自動的に使用します。</string>
+    <string name="authorization_charging_threshold">バイパス給電の充電しきい値</string>
+    <string name="authorization_charging_threshold_value">%1$d%%</string>
     <string name="authorization_root">Root 権限</string>
     <string name="authorization_root_granted">Root 権限を取得済み</string>
     <string name="authorization_root_not_granted">Root 権限がありません、タップして更新</string>

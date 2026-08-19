@@ -68,6 +68,16 @@
     <string name="tile_joystick_label">ジョイスティック</string>
     <string name="tile_performance_label">周波数プロファイル</string>
     <string name="tile_button_layout_label">ボタンレイアウト</string>
+    <string name="tile_charging_label">バイパス給電</string>
+    <string name="charging_not_connected">外部電源に接続されていません</string>
+    <string name="charging_not_connected_short">未接続</string>
+    <string name="charging_mode_normal">通常充電</string>
+    <string name="charging_mode_bypass">バイパス給電</string>
+    <string name="charging_mode_threshold">%1$d%% まで充電</string>
+    <string name="charging_mode_normal_toast">通常充電</string>
+    <string name="charging_mode_bypass_toast">バイパス給電中</string>
+    <string name="charging_mode_threshold_toast">%1$d%% でバイパス給電を開始</string>
+    <string name="charging_threshold_title">バイパス給電しきい値</string>
     <string name="tile_on">オン</string>
     <string name="tile_off">オフ</string>
 

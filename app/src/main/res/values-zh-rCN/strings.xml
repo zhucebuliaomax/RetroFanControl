@@ -68,6 +68,16 @@
     <string name="ambilight_brightness">环境光亮度</string>
     <string name="tile_performance_label">频率方案</string>
     <string name="tile_button_layout_label">按键布局</string>
+    <string name="tile_charging_label">旁路供电</string>
+    <string name="charging_not_connected">当前未在充电</string>
+    <string name="charging_not_connected_short">未连接电源</string>
+    <string name="charging_mode_normal">正常充电</string>
+    <string name="charging_mode_bypass">旁路供电</string>
+    <string name="charging_mode_threshold">充至 %1$d%%</string>
+    <string name="charging_mode_normal_toast">正常充电</string>
+    <string name="charging_mode_bypass_toast">正在旁路供电</string>
+    <string name="charging_mode_threshold_toast">充至%1$d%%开始旁路供电</string>
+    <string name="charging_threshold_title">旁路供电电量</string>
     <string name="tile_on">开启</string>
     <string name="tile_off">关闭</string>
 

@@ -289,7 +289,7 @@ fun DashboardScreen(
     }
     val addPresetFocusRequester = remember { FocusRequester() }
     val appFocusRequester = remember { FocusRequester() }
-    val authorizationFocusRequesters = remember { List(13) { FocusRequester() } }
+    val authorizationFocusRequesters = remember { List(14) { FocusRequester() } }
     val githubFocusRequester = remember { FocusRequester() }
     val navigationFocusRequesters = remember {
         List(DashboardDestination.entries.size) { FocusRequester() }
@@ -902,6 +902,8 @@ fun DashboardScreen(
                     overlayPermissionGranted = overlayPermissionGranted,
                     notificationsEnabled = notificationsEnabled,
                     ambilightLeftStickLower = state.ambilightLeftStickLower,
+                    preserveBypassCharging = state.preserveBypassCharging,
+                    chargingThreshold = state.chargingThreshold,
                 ),
                 onTelemetryOverlayClick = {
                     if (!overlayPermissionGranted) {
@@ -935,6 +937,8 @@ fun DashboardScreen(
                 onOpenOverlaySettings = { context.openOverlaySettings() },
                 onOpenNotificationSettings = { context.openFanNotificationSettings() },
                 onAmbilightLeftStickLowerChange = vm::setAmbilightLeftStickLower,
+                onPreserveBypassChargingChange = vm::setPreserveBypassCharging,
+                onChargingThresholdChange = vm::setChargingThreshold,
                 onExportData = { exportDataLauncher.launch("RetroControl-data.json") },
                 onImportData = {
                     importDataLauncher.launch(
@@ -962,6 +966,14 @@ fun DashboardScreen(
                     .focusRequester(authorizationFocusRequesters[2])
                     .focusProperties {
                         up = authorizationFocusRequesters[1]
+                        down = authorizationFocusRequesters[13]
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
+                preserveBypassChargingModifier = Modifier
+                    .focusRequester(authorizationFocusRequesters[13])
+                    .focusProperties {
+                        up = authorizationFocusRequesters[2]
                         down = authorizationFocusRequesters[3]
                         left = FocusRequester.Default
                         right = FocusRequester.Default

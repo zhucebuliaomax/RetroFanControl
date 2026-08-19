@@ -8,9 +8,12 @@ import androidx.core.content.edit
 import com.mmax.retrocontrol.RootAccessManager
 import com.mmax.retrocontrol.data.FanCurvePreferences
 import com.mmax.retrocontrol.data.Prefs
+import com.mmax.retrocontrol.data.ChargingControlPreferences
+import com.mmax.retrocontrol.hardware.BatteryConnectionReader
 import com.mmax.retrocontrol.tile.FanQuickSettingsTile
 import com.mmax.retrocontrol.tile.OverlayTileService
 import com.mmax.retrocontrol.tile.ButtonLayoutQuickSettingsTile
+import com.mmax.retrocontrol.tile.ChargingQuickSettingsTile
 
 /**
  * Restores hardware profiles after boot only when the user opted in.
@@ -34,7 +37,16 @@ class BootReceiver : BroadcastReceiver() {
         OverlayTileService.requestRefresh(appContext)
         ButtonLayoutQuickSettingsTile.requestRefresh(appContext)
 
-        if (!prefs.getBoolean(Prefs.AUTO_START_ENABLED, true)) {
+        ChargingControlPreferences.resetSession(prefs)
+        val restoreChargingThreshold =
+            ChargingControlPreferences.isPreserveEnabled(prefs) &&
+                BatteryConnectionReader.read(appContext).powerConnected
+        if (restoreChargingThreshold) {
+            ChargingControlPreferences.beginPreservedSession(prefs)
+        }
+        ChargingQuickSettingsTile.requestRefresh(appContext)
+
+        if (!prefs.getBoolean(Prefs.AUTO_START_ENABLED, true) && !restoreChargingThreshold) {
             FanCurvePreferences.select(prefs, null)
             FanQuickSettingsTile.requestRefresh(appContext)
             Log.i(TAG, "Boot detected — automatic start is disabled")
@@ -57,6 +69,7 @@ class BootReceiver : BroadcastReceiver() {
             FanQuickSettingsTile.requestRefresh(appContext)
             OverlayTileService.requestRefresh(appContext)
             ButtonLayoutQuickSettingsTile.requestRefresh(appContext)
+            ChargingQuickSettingsTile.requestRefresh(appContext)
             pendingResult.finish()
         }
     }

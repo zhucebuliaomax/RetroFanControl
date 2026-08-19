@@ -103,6 +103,15 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".service.ChargingPowerReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
+                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".tile.FanQuickSettingsTile"
             android:exported="true"
@@ -190,6 +199,20 @@
             android:exported="true"
             android:icon="@drawable/ic_tile_button_layout_nintendo"
             android:label="@string/tile_button_layout_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+        </service>
+
+        <service
+            android:name=".tile.ChargingQuickSettingsTile"
+            android:exported="true"
+            android:icon="@drawable/ic_battery_mid"
+            android:label="@string/tile_charging_label"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />

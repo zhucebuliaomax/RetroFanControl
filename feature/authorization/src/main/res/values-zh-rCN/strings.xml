@@ -9,6 +9,10 @@
     <string name="authorization_auto_start_disabled">已关闭，重启后不会自动启动</string>
     <string name="authorization_profile_switch_toasts">切换配置时显示 Toast</string>
     <string name="authorization_profile_switch_toasts_summary">打开游戏或使用自定义配置的应用时显示系统 Toast。</string>
+    <string name="authorization_preserve_bypass_charging">保留旁路供电</string>
+    <string name="authorization_preserve_bypass_charging_summary">每次接入电源时自动使用已保存的充电阈值。</string>
+    <string name="authorization_charging_threshold">旁路供电电量</string>
+    <string name="authorization_charging_threshold_value">%1$d%%</string>
     <string name="authorization_root">Root 权限</string>
     <string name="authorization_root_granted">已获取 Root 权限</string>
     <string name="authorization_root_not_granted">未获取 Root 权限，点击刷新</string>
