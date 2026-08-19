@@ -393,24 +393,13 @@ private fun BrightnessSetting(
     var sliderNode by remember { mutableIntStateOf(nodeForBrightness(brightness)) }
     var lastPreviewAt by remember { mutableStateOf(0L) }
     LaunchedEffect(brightness) { sliderNode = nodeForBrightness(brightness) }
-    val percentage = (sliderNode * 100f / (BRIGHTNESS_NODE_COUNT - 1)).roundToInt()
     Surface(
         modifier = Modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.48f),
         shape = ListItemDefaults.segmentedShapes(index = 1, count = 3).shape,
         color = ListItemDefaults.segmentedColors().containerColor,
     ) {
         Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.joystick_brightness),
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = stringResource(R.string.joystick_brightness_value, percentage),
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
+            Text(text = stringResource(R.string.joystick_brightness))
             Spacer(Modifier.height(4.dp))
             Slider(
                 value = sliderNode.toFloat(),
@@ -634,12 +623,15 @@ private fun hsvColor(hue: Float, saturation: Float): Color = Color(
     ),
 )
 
-private const val BRIGHTNESS_NODE_COUNT = 11
+private val BRIGHTNESS_LEVELS = intArrayOf(
+    0, 10, 14, 21, 30, 42, 61, 87, 125, 179, 255,
+)
+private val BRIGHTNESS_NODE_COUNT = BRIGHTNESS_LEVELS.size
 private const val LED_PREVIEW_INTERVAL_MS = 50L
 
 private fun brightnessForNode(node: Int): Int =
-    (node.coerceIn(0, BRIGHTNESS_NODE_COUNT - 1) * 255f /
-        (BRIGHTNESS_NODE_COUNT - 1)).roundToInt()
+    BRIGHTNESS_LEVELS[node.coerceIn(BRIGHTNESS_LEVELS.indices)]
 
-private fun nodeForBrightness(brightness: Int): Int =
-    (brightness.coerceIn(0, 255) * (BRIGHTNESS_NODE_COUNT - 1) / 255f).roundToInt()
+private fun nodeForBrightness(brightness: Int): Int = BRIGHTNESS_LEVELS.indices.minBy { node ->
+    kotlin.math.abs(BRIGHTNESS_LEVELS[node] - brightness.coerceIn(0, 255))
+}

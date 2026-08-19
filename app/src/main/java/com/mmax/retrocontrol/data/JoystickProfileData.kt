@@ -7,6 +7,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
+const val DEFAULT_JOYSTICK_BRIGHTNESS = 64
+
 data class JoystickProfile(
     val id: String,
     val name: String,
@@ -14,7 +16,7 @@ data class JoystickProfile(
     val red: Int = 255,
     val green: Int = 100,
     val blue: Int = 0,
-    val brightness: Int = 198,
+    val brightness: Int = DEFAULT_JOYSTICK_BRIGHTNESS,
 ) {
     init {
         require(id.isNotBlank()) { "A joystick profile requires an id" }
@@ -140,6 +142,7 @@ object JoystickProfilePreferences {
         val profile = (template ?: JoystickProfile(id = id, name = name)).copy(
             id = id,
             name = name.trim().take(40).ifBlank { "New profile" },
+            brightness = DEFAULT_JOYSTICK_BRIGHTNESS,
         )
         return current.plus(profile).also { persist(prefs, it) } to id
     }
@@ -280,7 +283,7 @@ object JoystickProfilePreferences {
                         red = item.optInt("red", 255),
                         green = item.optInt("green", 100),
                         blue = item.optInt("blue", 0),
-                        brightness = item.optInt("brightness", 198),
+                        brightness = item.optInt("brightness", DEFAULT_JOYSTICK_BRIGHTNESS),
                     ).normalized()
                 )
             }

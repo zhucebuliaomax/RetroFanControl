@@ -16,7 +16,6 @@
     <string name="joystick_custom_color">カスタムカラー</string>
     <string name="joystick_custom_color_picker">カスタムカラーを選択</string>
     <string name="joystick_brightness">明るさ</string>
-    <string name="joystick_brightness_value">%1$d%%</string>
     <string name="joystick_mode_off">オフ</string>
     <string name="joystick_mode_static">静的</string>
     <string name="joystick_mode_rainbow">レインボーサイクル</string>

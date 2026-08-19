@@ -16,7 +16,6 @@
     <string name="joystick_custom_color">自定义颜色</string>
     <string name="joystick_custom_color_picker">选择自定义颜色</string>
     <string name="joystick_brightness">亮度</string>
-    <string name="joystick_brightness_value">%1$d%%</string>
     <string name="joystick_mode_off">关闭</string>
     <string name="joystick_mode_static">静态</string>
     <string name="joystick_mode_rainbow">彩虹循环</string>

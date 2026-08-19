@@ -208,7 +208,7 @@ object ControlItemJson {
                 red = data.optInt("red", 255),
                 green = data.optInt("green", 100),
                 blue = data.optInt("blue", 0),
-                brightness = data.optInt("brightness", 198),
+                brightness = data.optInt("brightness", DEFAULT_JOYSTICK_BRIGHTNESS),
             ).normalized(),
         )
     }

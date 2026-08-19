@@ -16,7 +16,6 @@
     <string name="joystick_custom_color">Custom color</string>
     <string name="joystick_custom_color_picker">Choose custom color</string>
     <string name="joystick_brightness">Brightness</string>
-    <string name="joystick_brightness_value">%1$d%%</string>
     <string name="joystick_mode_off">Off</string>
     <string name="joystick_mode_static">Static</string>
     <string name="joystick_mode_rainbow">Rainbow cycle</string>
