@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -65,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -174,6 +176,7 @@ fun JoystickProfileEditorDialog(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val focusManager = LocalFocusManager.current
     var showModePicker by remember(profile.id) { mutableStateOf(false) }
     var showColorPicker by remember(profile.id) { mutableStateOf(false) }
     var showRename by remember(profile.id) { mutableStateOf(false) }
@@ -246,7 +249,10 @@ fun JoystickProfileEditorDialog(
                         profile = profile,
                         enabled = profile.mode.supportsCustomColor,
                         onColorSelected = onColorSelected,
-                        onCustomColorClick = { showColorPicker = true },
+                        onCustomColorClick = {
+                            focusManager.clearFocus(force = true)
+                            showColorPicker = true
+                        },
                     )
                 }
             }
@@ -479,7 +485,6 @@ private fun ColorPickerDialog(
     }
     var lastPreviewAt by remember { mutableStateOf(0L) }
     var previewChanged by remember { mutableStateOf(false) }
-    val previewColor = hsvColor(hue, saturation)
     val sendColor: (Boolean) -> Unit = { force ->
         val now = SystemClock.elapsedRealtime()
         if (force || now - lastPreviewAt >= LED_PREVIEW_INTERVAL_MS) {
@@ -503,13 +508,15 @@ private fun ColorPickerDialog(
         onDismissRequest = dismissWithoutSelection,
         title = { Text(stringResource(R.string.joystick_custom_color)) },
         text = {
-            Column(Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 HsvChannelSlider(
                     label = "H ${hue.roundToInt()}°",
                     value = hue,
                     valueRange = 0f..360f,
                     brush = Brush.horizontalGradient(HUE_GRADIENT),
-                    thumbColor = previewColor,
                     onValueChange = {
                         hue = it
                         sendColor(false)
@@ -523,7 +530,6 @@ private fun ColorPickerDialog(
                     brush = Brush.horizontalGradient(
                         listOf(Color.White, hsvColor(hue, 100f)),
                     ),
-                    thumbColor = previewColor,
                     onValueChange = {
                         saturation = it
                         sendColor(false)
@@ -556,22 +562,20 @@ private fun HsvChannelSlider(
     value: Float,
     valueRange: ClosedFloatingPointRange<Float>,
     brush: Brush,
-    thumbColor: Color,
     onValueChange: (Float) -> Unit,
     onValueChangeFinished: () -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
-            modifier = Modifier.width(72.dp),
             fontWeight = FontWeight.SemiBold,
         )
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(16.dp)
-                    .clip(CircleShape)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(brush),
             )
             Slider(
@@ -581,7 +585,6 @@ private fun HsvChannelSlider(
                 valueRange = valueRange,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 colors = SliderDefaults.colors(
-                    thumbColor = thumbColor,
                     activeTrackColor = Color.Transparent,
                     inactiveTrackColor = Color.Transparent,
                 ),
