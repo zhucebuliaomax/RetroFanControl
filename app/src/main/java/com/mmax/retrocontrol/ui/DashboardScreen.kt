@@ -551,11 +551,10 @@ fun DashboardScreen(
                 },
                 onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
                 onExport = { exportListKind = ExportListKind.FAN },
+                collapsedUpFocusRequester = fanProfileFocusRequesters.last(),
                 modifier = Modifier
                     .focusRequester(addCurveFocusRequester)
                     .focusProperties {
-                        up = fanProfileFocusRequesters.last()
-                        down = FocusRequester.Default
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },
@@ -713,11 +712,10 @@ fun DashboardScreen(
                 },
                 onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
                 onExport = { exportListKind = ExportListKind.PRESET },
+                collapsedUpFocusRequester = presetFocusRequesters.last(),
                 modifier = Modifier
                     .focusRequester(addPresetFocusRequester)
                     .focusProperties {
-                        up = presetFocusRequesters.last()
-                        down = FocusRequester.Default
                         left = FocusRequester.Default
                         right = FocusRequester.Default
                     },

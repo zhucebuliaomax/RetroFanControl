@@ -1,6 +1,7 @@
 @file:OptIn(
     androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
     androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.ui.ExperimentalComposeUiApi::class,
 )
 
 package com.mmax.retrocontrol.ui
@@ -73,6 +74,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -100,6 +102,17 @@ private enum class AppListFilter {
     GAME,
     OTHER,
     ALL,
+}
+
+@Suppress("DEPRECATION")
+private fun Modifier.keepVerticalFocusInPane(): Modifier = focusProperties {
+    exit = { direction ->
+        when (direction) {
+            FocusDirection.Up,
+            FocusDirection.Down -> FocusRequester.Cancel
+            else -> FocusRequester.Default
+        }
+    }
 }
 
 internal enum class DashboardDestination(
@@ -211,12 +224,12 @@ internal fun AdaptiveDashboardScaffold(
                                 }
                             } else {
                                 up = if (index == 0) {
-                                    FocusRequester.Default
+                                    FocusRequester.Cancel
                                 } else {
                                     navigationFocusRequesters[index - 1]
                                 }
                                 down = if (index == DashboardDestination.entries.lastIndex) {
-                                    FocusRequester.Default
+                                    FocusRequester.Cancel
                                 } else {
                                     navigationFocusRequesters[index + 1]
                                 }
@@ -285,6 +298,7 @@ private fun DashboardPage(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .keepVerticalFocusInPane()
                 .focusGroup()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
         ) {
@@ -414,6 +428,7 @@ private fun ControlListPane(
         Column(
             modifier = modifier
                 .fillMaxHeight()
+                .keepVerticalFocusInPane()
                 .focusGroup()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
         ) {
@@ -436,7 +451,7 @@ private fun ControlListPane(
                     modifier = Modifier
                         .focusRequester(focusRequesters[ControlModule.PRESET.ordinal])
                         .focusProperties {
-                            up = FocusRequester.Default
+                            up = FocusRequester.Cancel
                             down = focusRequesters[ControlModule.FAN.ordinal]
                         },
                     onClick = { onControlSelected(ControlModule.PRESET) },
@@ -466,7 +481,7 @@ private fun ControlListPane(
                                         focusRequesters[standardControls[index - 1].ordinal]
                                     }
                                     down = if (index == standardControls.lastIndex) {
-                                        FocusRequester.Default
+                                        FocusRequester.Cancel
                                     } else {
                                         focusRequesters[standardControls[index + 1].ordinal]
                                     }
@@ -543,6 +558,7 @@ private fun ControlDetailPane(
     Surface(
         modifier = modifier
             .fillMaxSize()
+            .keepVerticalFocusInPane()
             .focusGroup(),
         shape = MaterialTheme.shapes.extraLargeIncreased,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -762,6 +778,7 @@ private fun AppListPane(
         Column(
             modifier = modifier
                 .fillMaxHeight()
+                .keepVerticalFocusInPane()
                 .focusGroup()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
         ) {
@@ -969,6 +986,7 @@ private fun AppDetailPane(
     Surface(
         modifier = modifier
             .fillMaxSize()
+            .keepVerticalFocusInPane()
             .focusGroup(),
         shape = MaterialTheme.shapes.extraLargeIncreased,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,

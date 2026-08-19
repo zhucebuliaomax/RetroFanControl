@@ -37,6 +37,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -57,9 +60,14 @@ fun ControlTransferFabMenu(
     onAdd: () -> Unit,
     onImport: (() -> Unit)? = null,
     onExport: (() -> Unit)? = null,
+    collapsedUpFocusRequester: FocusRequester = FocusRequester.Default,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val fabFocusRequester = remember { FocusRequester() }
+    val importFocusRequester = remember { FocusRequester() }
+    val exportFocusRequester = remember { FocusRequester() }
+    val addFocusRequester = remember { FocusRequester() }
     BackHandler(enabled = expanded) { expanded = false }
     val menuContentDescription = stringResource(R.string.more_actions)
     FloatingActionButtonMenu(
@@ -68,7 +76,20 @@ fun ControlTransferFabMenu(
             ToggleFloatingActionButton(
                 checked = expanded,
                 onCheckedChange = { expanded = it },
-                modifier = modifier,
+                modifier = modifier
+                    .focusRequester(fabFocusRequester)
+                    .focusProperties {
+                        up = if (expanded) addFocusRequester else collapsedUpFocusRequester
+                        down = if (expanded) {
+                            when {
+                                onImport != null -> importFocusRequester
+                                onExport != null -> exportFocusRequester
+                                else -> addFocusRequester
+                            }
+                        } else {
+                            FocusRequester.Cancel
+                        }
+                    },
             ) {
                 val imageVector by remember {
                     derivedStateOf {
@@ -91,6 +112,12 @@ fun ControlTransferFabMenu(
                 },
                 text = { Text(stringResource(R.string.import_items)) },
                 icon = { Icon(Icons.Default.FileDownload, contentDescription = null) },
+                modifier = Modifier
+                    .focusRequester(importFocusRequester)
+                    .focusProperties {
+                        up = fabFocusRequester
+                        down = if (onExport != null) exportFocusRequester else addFocusRequester
+                    },
             )
         }
         onExport?.let { exportItems ->
@@ -101,6 +128,12 @@ fun ControlTransferFabMenu(
                 },
                 text = { Text(stringResource(R.string.export_items)) },
                 icon = { Icon(Icons.Default.FileUpload, contentDescription = null) },
+                modifier = Modifier
+                    .focusRequester(exportFocusRequester)
+                    .focusProperties {
+                        up = if (onImport != null) importFocusRequester else fabFocusRequester
+                        down = addFocusRequester
+                    },
             )
         }
         FloatingActionButtonMenuItem(
@@ -110,6 +143,16 @@ fun ControlTransferFabMenu(
             },
             text = { Text(addLabel) },
             icon = { Icon(Icons.Default.Add, contentDescription = null) },
+            modifier = Modifier
+                .focusRequester(addFocusRequester)
+                .focusProperties {
+                    up = when {
+                        onExport != null -> exportFocusRequester
+                        onImport != null -> importFocusRequester
+                        else -> fabFocusRequester
+                    }
+                    down = fabFocusRequester
+                },
         )
     }
 }

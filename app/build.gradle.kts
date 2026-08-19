@@ -31,8 +31,8 @@ android {
         applicationId = "com.mmax.retrocontrol"
         minSdk = 26
         targetSdk = 37
-        versionCode = 20027
-        versionName = "2.0.0 beta 27"
+        versionCode = 20028
+        versionName = "2.0.0 beta 28"
     }
 
     buildTypes {
