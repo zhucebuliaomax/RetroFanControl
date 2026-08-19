@@ -7,6 +7,8 @@
     <string name="nav_apps">应用</string>
     <string name="nav_access">设置</string>
     <string name="control_title">控制项</string>
+    <string name="controls_summary">添加自定义控制项，并通过配置自由组合。</string>
+    <string name="apps_summary">为每个应用设置自定义控制项。</string>
     <string name="control_preset">配置</string>
     <string name="control_fan">风扇曲线</string>
     <string name="control_joystick">摇杆</string>

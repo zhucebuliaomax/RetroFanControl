@@ -442,7 +442,8 @@ private fun ControlListPane(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 8.dp),
             ) {
-                Spacer(Modifier.size(8.dp))
+                PageSupportingText(stringResource(R.string.controls_summary))
+                Spacer(Modifier.size(12.dp))
                 ControlModuleRow(
                     control = ControlModule.PRESET,
                     index = 0,
@@ -904,6 +905,8 @@ private fun AppListPane(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 8.dp),
             ) {
+                PageSupportingText(stringResource(R.string.apps_summary))
+                Spacer(Modifier.size(12.dp))
                 if (filteredApps.isEmpty()) {
                     Text(
                         text = stringResource(R.string.no_apps_found),
@@ -1090,5 +1093,15 @@ private fun PageTitle(
         style = MaterialTheme.typography.titleLargeEmphasized,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
+    )
+}
+
+@Composable
+private fun PageSupportingText(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.padding(horizontal = 8.dp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodyMedium,
     )
 }

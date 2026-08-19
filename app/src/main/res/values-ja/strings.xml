@@ -7,6 +7,8 @@
     <string name="nav_apps">アプリ</string>
     <string name="nav_access">設定</string>
     <string name="control_title">コントロール</string>
+    <string name="controls_summary">カスタムコントロールを追加し、プロファイルで自由に組み合わせられます。</string>
+    <string name="apps_summary">アプリごとにカスタムコントロールを設定できます。</string>
     <string name="control_fan">ファンカーブ</string>
     <string name="control_joystick">ジョイスティック</string>
     <string name="control_button_layout">ボタンレイアウト</string>

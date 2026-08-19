@@ -7,6 +7,8 @@
     <string name="nav_apps">Apps</string>
     <string name="nav_access">Settings</string>
     <string name="control_title">Controls</string>
+    <string name="controls_summary">Create custom controls and combine them freely in profiles.</string>
+    <string name="apps_summary">Set custom controls for each app.</string>
     <string name="control_preset">Profile</string>
     <string name="control_fan">Fan curve</string>
     <string name="control_joystick">Joystick</string>

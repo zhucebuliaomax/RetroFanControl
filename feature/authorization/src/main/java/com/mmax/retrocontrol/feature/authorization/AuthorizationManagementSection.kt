@@ -354,10 +354,6 @@ fun AuthorizationManagementSection(
         )
     }
     Spacer(Modifier.height(20.dp))
-    SettingsSectionTitle(
-        text = stringResource(R.string.authorization_caution),
-        modifier = Modifier.padding(bottom = SettingsTokens.sectionTitleBottomPadding),
-    )
     SettingsSegmentGroup {
         val itemCount = if (state.usbThermalControlEnabled) 2 else 1
         SettingsPreferenceRow(
@@ -396,10 +392,6 @@ fun AuthorizationManagementSection(
     }
     UsbThermalFooter()
     Spacer(Modifier.height(20.dp))
-    SettingsSectionTitle(
-        text = stringResource(R.string.authorization_data),
-        modifier = Modifier.padding(bottom = SettingsTokens.sectionTitleBottomPadding),
-    )
     SettingsSegmentGroup {
         SettingsPreferenceRow(
             index = 0,
