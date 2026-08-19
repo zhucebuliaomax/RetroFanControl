@@ -575,7 +575,7 @@ fun ListItemShapes.lockToInteractionShape(shape: Shape = focusedShape): ListItem
 )
 
 object SettingsTokens {
-    val focusScrollMargin = 40.dp
+    val focusScrollMargin = 80.dp
     val pageHorizontalPadding = 16.dp
     val sectionTitleInset = 16.dp
     val sectionTitleBottomPadding = 8.dp

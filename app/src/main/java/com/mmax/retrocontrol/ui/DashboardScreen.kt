@@ -112,6 +112,7 @@ import com.mmax.retrocontrol.RootAccessManager
 import com.mmax.retrocontrol.data.ControlItemJson
 import com.mmax.retrocontrol.data.ControlPresetCatalog
 import com.mmax.retrocontrol.data.FanCurvePoint
+import com.mmax.retrocontrol.data.PerformanceProfile
 import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.displayName
 import com.mmax.retrocontrol.designsystem.FocusScrollMargin
@@ -1142,10 +1143,8 @@ fun DashboardScreen(
                 ExportChoice(it.id, it.name)
             }
             ExportListKind.PERFORMANCE -> state.performanceProfiles.profiles
-                .filterNot { it.isStock }
-                .map {
-                ExportChoice(it.id, it.displayName(context))
-            }
+                .filter(PerformanceProfile::isEditable)
+                .map { ExportChoice(it.id, it.displayName(context)) }
         }
         ExportSelectionDialog(
             choices = choices,
@@ -1161,7 +1160,7 @@ fun DashboardScreen(
                                 .profile(preset.buttonLayoutId)
                             val performance = state.performanceProfiles
                                 .profile(preset.performanceProfileId)
-                                ?.takeUnless { it.isStock }
+                                ?.takeIf(PerformanceProfile::isEditable)
                                 ?.let { it.displayName(context) to it }
                             PendingExportFile(
                                 preset.name,
@@ -1189,7 +1188,7 @@ fun DashboardScreen(
                             PendingExportFile(it.name, ControlItemJson.encodeButtonLayout(it))
                         }
                     ExportListKind.PERFORMANCE -> state.performanceProfiles.profiles
-                        .filterNot { it.isStock }
+                        .filter(PerformanceProfile::isEditable)
                         .filter { it.id in selectedIds }
                         .map {
                             val name = it.displayName(context)
@@ -1832,36 +1831,37 @@ private fun AppFooter(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(4.dp))
-        Row(
-            modifier = linkModifier
-                .clip(RoundedCornerShape(8.dp))
-                .bringIntoViewOnFocus()
-                .clickable {
-                    context.startActivity(
-                        Intent(Intent.ACTION_VIEW, githubUrl.toUri())
-                    )
-                }
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        Surface(
+            onClick = {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, githubUrl.toUri())
+                )
+            },
+            modifier = linkModifier.bringIntoViewOnFocus(),
+            shape = RoundedCornerShape(8.dp),
+            color = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_github),
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(R.string.github),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                contentDescription = stringResource(R.string.open_github),
-                modifier = Modifier.size(14.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_github),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+                Text(
+                    text = stringResource(R.string.github),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = stringResource(R.string.open_github),
+                    modifier = Modifier.size(14.dp),
+                )
+            }
         }
     }
 }

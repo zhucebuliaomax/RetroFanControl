@@ -15,6 +15,7 @@ import com.mmax.retrocontrol.data.AppControlProfile
 import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.AmbilightPreferences
 import com.mmax.retrocontrol.data.BuiltInFanCurve
+import com.mmax.retrocontrol.data.BuiltInPerformanceProfile
 import com.mmax.retrocontrol.data.ButtonLayoutProfileCatalog
 import com.mmax.retrocontrol.data.ButtonLayoutProfilePreferences
 import com.mmax.retrocontrol.data.ButtonLayoutTilePreferences
@@ -32,6 +33,7 @@ import com.mmax.retrocontrol.data.FanSelectionPreferences
 import com.mmax.retrocontrol.data.FanSelectionSource
 import com.mmax.retrocontrol.data.PresetPreferences
 import com.mmax.retrocontrol.data.PerformanceProfileConfig
+import com.mmax.retrocontrol.data.PerformanceProfile
 import com.mmax.retrocontrol.data.PerformanceProfilePreferences
 import com.mmax.retrocontrol.data.PerformanceTilePreferences
 import com.mmax.retrocontrol.data.Prefs
@@ -745,7 +747,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         state.buttonLayoutProfiles.profiles.forEach {
             addItem(it.id, ControlItemJson.encodeButtonLayout(it))
         }
-        state.performanceProfiles.profiles.forEach {
+        state.performanceProfiles.profiles.filter(PerformanceProfile::isEditable).forEach {
             addItem(it.id, ControlItemJson.encodePerformance(it.displayName(context), it))
         }
         state.presetConfig.catalog.presets.forEach {
@@ -847,6 +849,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val buttonLayoutIds = mutableMapOf<String, String>()
         val performanceIds = mutableMapOf<String, String>()
         val presetIds = mutableMapOf<String, String>()
+        BuiltInPerformanceProfile.entries.associateTo(performanceIds) { it.id to it.id }
 
         val fanNames = mutableState.value.fanConfig.catalog.profiles
             .mapTo(mutableSetOf()) { it.displayName(context) }

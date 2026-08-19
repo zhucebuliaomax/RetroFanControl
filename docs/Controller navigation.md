@@ -23,7 +23,7 @@ All current and future controller-navigation changes must use the standard Andro
 
 - Use Material focus semantics and Compose APIs such as `focusable`, `focusGroup`, `FocusRequester`, and `focusProperties` for UI navigation.
 - Use `BringIntoViewRequester` for focus-triggered scrolling and provide a page-level `BringIntoViewSpec` through `LocalBringIntoViewSpec` when the focused item needs a consistent landing position.
-- Keep a `30.dp` safe margin between a focused item and the leading or trailing edge of its scroll viewport. A focus relocation request must scroll only when the focused bounds enter this margin.
+- Keep an `80.dp` safe margin between a focused item and the leading or trailing edge of its scroll viewport. A focus relocation request must scroll only when the focused bounds enter this margin.
 - Apply the `PaddingValues` supplied by `Scaffold` to the scroll container's root before applying `verticalScroll`. This constrains the viewport below the app bar instead of treating the app-bar inset as content that can scroll away.
 - Do not add real layout padding to every focusable item to simulate a focus safe area. Focus scrolling must not change card sizes, section spacing, or touch layout.
 - Prefer the focus system over activity-level `KeyEvent` or `MotionEvent` interception. Add low-level controller input handling only when a documented device compatibility issue cannot be represented by Compose focus APIs.
@@ -118,7 +118,7 @@ The future implementation is complete when all of the following are true:
 - A controller can enter the main settings sequence, move through every supported item, and activate ordinary rows without using touch.
 - Initial focus does not remain trapped on the app-bar back button.
 - Moving through a long page scrolls focused controls into view.
-- Focused controls remain at least `30.dp` from the top and bottom edges of their scroll viewport whenever the content has enough scroll range.
+- Focused controls remain at least `80.dp` from the top and bottom edges of their scroll viewport whenever the content has enough scroll range.
 - Focused controls are never placed underneath the app bar; `Scaffold` content padding constrains the scroll viewport.
 - Rows containing switches create only one controller focus stop and toggle when confirmed.
 - The complete Live Telemetry panel creates exactly one focus stop, has no confirm action, and moves directly between the overlay row and the first authorization row.
