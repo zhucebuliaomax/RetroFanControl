@@ -6,11 +6,11 @@
 package com.mmax.retrocontrol.feature.joystick
 
 import android.graphics.Color as AndroidColor
+import android.os.SystemClock
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -330,7 +329,7 @@ private fun ColorPresetSetting(
     Surface(
         modifier = Modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.48f),
         shape = ListItemDefaults.segmentedShapes(index = 2, count = 3).shape,
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        color = ListItemDefaults.segmentedColors().containerColor,
     ) {
         Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
             Text(stringResource(R.string.joystick_color_presets))
@@ -352,25 +351,20 @@ private fun ColorPresetSetting(
                         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
                         label = "joystickColorPresetScale",
                     )
-                    Box(
+                    Surface(
+                        onClick = { onColorSelected(red, green, blue) },
+                        enabled = enabled,
                         modifier = Modifier
                             .graphicsLayer(scaleX = scale, scaleY = scale)
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .background(Color(red, green, blue))
-                            .border(
-                                width = if (selected) 3.dp else 1.dp,
-                                color = if (selected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.outlineVariant
-                                },
-                                shape = CircleShape,
-                            )
-                            .clickable(enabled = enabled) {
-                                onColorSelected(red, green, blue)
-                            },
-                    )
+                            .size(46.dp),
+                        shape = CircleShape,
+                        color = Color(red, green, blue),
+                        border = BorderStroke(
+                            width = if (selected) 3.dp else 1.dp,
+                            color = if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outlineVariant,
+                        ),
+                    ) {}
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -391,12 +385,13 @@ private fun BrightnessSetting(
     onBrightnessSelected: (Int) -> Unit,
 ) {
     var sliderNode by remember { mutableIntStateOf(nodeForBrightness(brightness)) }
+    var lastPreviewAt by remember { mutableStateOf(0L) }
     LaunchedEffect(brightness) { sliderNode = nodeForBrightness(brightness) }
     val percentage = (sliderNode * 100f / (BRIGHTNESS_NODE_COUNT - 1)).roundToInt()
     Surface(
         modifier = Modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.48f),
         shape = ListItemDefaults.segmentedShapes(index = 1, count = 3).shape,
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        color = ListItemDefaults.segmentedColors().containerColor,
     ) {
         Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -414,7 +409,15 @@ private fun BrightnessSetting(
             Slider(
                 value = sliderNode.toFloat(),
                 onValueChange = { value ->
-                    sliderNode = value.roundToInt().coerceIn(0, BRIGHTNESS_NODE_COUNT - 1)
+                    val node = value.roundToInt().coerceIn(0, BRIGHTNESS_NODE_COUNT - 1)
+                    if (node != sliderNode) {
+                        sliderNode = node
+                        val now = SystemClock.elapsedRealtime()
+                        if (now - lastPreviewAt >= LED_PREVIEW_INTERVAL_MS) {
+                            lastPreviewAt = now
+                            onBrightnessSelected(brightnessForNode(node))
+                        }
+                    }
                 },
                 onValueChangeFinished = {
                     onBrightnessSelected(brightnessForNode(sliderNode))
@@ -467,34 +470,51 @@ private fun ColorPickerDialog(
             AndroidColor.RGBToHSV(initialR, initialG, initialB, hsv)
         }
     }
-    var hue by remember(initialR, initialG, initialB) {
+    val originalColor = remember { Triple(initialR, initialG, initialB) }
+    var hue by remember {
         mutableFloatStateOf(initialHsv[0])
     }
-    var saturation by remember(initialR, initialG, initialB) {
+    var saturation by remember {
         mutableFloatStateOf(initialHsv[1] * 100f)
     }
+    var lastPreviewAt by remember { mutableStateOf(0L) }
+    var previewChanged by remember { mutableStateOf(false) }
     val previewColor = hsvColor(hue, saturation)
+    val sendColor: (Boolean) -> Unit = { force ->
+        val now = SystemClock.elapsedRealtime()
+        if (force || now - lastPreviewAt >= LED_PREVIEW_INTERVAL_MS) {
+            lastPreviewAt = now
+            val color = AndroidColor.HSVToColor(floatArrayOf(hue, saturation / 100f, 1f))
+            previewChanged = true
+            onColorSelected(
+                AndroidColor.red(color),
+                AndroidColor.green(color),
+                AndroidColor.blue(color),
+            )
+        }
+    }
+    val dismissWithoutSelection = {
+        if (previewChanged) {
+            onColorSelected(originalColor.first, originalColor.second, originalColor.third)
+        }
+        onDismiss()
+    }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = dismissWithoutSelection,
         title = { Text(stringResource(R.string.joystick_custom_color)) },
         text = {
             Column(Modifier.fillMaxWidth()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(76.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(previewColor)
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp)),
-                )
-                Spacer(Modifier.height(16.dp))
                 HsvChannelSlider(
                     label = "H ${hue.roundToInt()}°",
                     value = hue,
                     valueRange = 0f..360f,
                     brush = Brush.horizontalGradient(HUE_GRADIENT),
                     thumbColor = previewColor,
-                    onValueChange = { hue = it },
+                    onValueChange = {
+                        hue = it
+                        sendColor(false)
+                    },
+                    onValueChangeFinished = { sendColor(true) },
                 )
                 HsvChannelSlider(
                     label = "S ${saturation.roundToInt()}%",
@@ -504,28 +524,25 @@ private fun ColorPickerDialog(
                         listOf(Color.White, hsvColor(hue, 100f)),
                     ),
                     thumbColor = previewColor,
-                    onValueChange = { saturation = it },
+                    onValueChange = {
+                        saturation = it
+                        sendColor(false)
+                    },
+                    onValueChangeFinished = { sendColor(true) },
                 )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    val color = AndroidColor.HSVToColor(
-                        floatArrayOf(hue, saturation / 100f, 1f),
-                    )
-                    onColorSelected(
-                        AndroidColor.red(color),
-                        AndroidColor.green(color),
-                        AndroidColor.blue(color),
-                    )
+                    sendColor(true)
                     onDismiss()
                 },
                 shapes = ButtonDefaults.shapes(),
             ) { Text(stringResource(R.string.joystick_select)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
+            TextButton(onClick = dismissWithoutSelection, shapes = ButtonDefaults.shapes()) {
                 Text(stringResource(R.string.joystick_cancel))
             }
         },
@@ -541,6 +558,7 @@ private fun HsvChannelSlider(
     brush: Brush,
     thumbColor: Color,
     onValueChange: (Float) -> Unit,
+    onValueChangeFinished: () -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
@@ -552,15 +570,16 @@ private fun HsvChannelSlider(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
+                    .height(16.dp)
                     .clip(CircleShape)
                     .background(brush),
             )
             Slider(
                 value = value,
                 onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
                 valueRange = valueRange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 colors = SliderDefaults.colors(
                     thumbColor = thumbColor,
                     activeTrackColor = Color.Transparent,
@@ -613,6 +632,7 @@ private fun hsvColor(hue: Float, saturation: Float): Color = Color(
 )
 
 private const val BRIGHTNESS_NODE_COUNT = 11
+private const val LED_PREVIEW_INTERVAL_MS = 50L
 
 private fun brightnessForNode(node: Int): Int =
     (node.coerceIn(0, BRIGHTNESS_NODE_COUNT - 1) * 255f /
