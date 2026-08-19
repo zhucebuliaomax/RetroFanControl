@@ -814,8 +814,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         settings.put("thermalProtectionDisabled", state.thermalProtectionDisabled)
         settings.put("preserveBypassCharging", state.preserveBypassCharging)
         settings.put("chargingThreshold", ChargingControlPreferences.load(prefs).threshold)
-        settings.put("overlayX", prefs.getInt(Prefs.OVERLAY_X, 100))
-        settings.put("overlayY", prefs.getInt(Prefs.OVERLAY_Y, 100))
+        settings.put("overlayX", prefs.getInt(Prefs.OVERLAY_X, Prefs.DEFAULT_OVERLAY_X))
+        settings.put("overlayY", prefs.getInt(Prefs.OVERLAY_Y, Prefs.DEFAULT_OVERLAY_Y))
 
         return JSONObject()
             .put("format", "retro-control-data")

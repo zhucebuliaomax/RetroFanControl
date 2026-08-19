@@ -14,14 +14,31 @@ data class FanCurvePoint(val tempC: Int, val speedPercent: Int) {
 enum class BuiltInFanCurve(
     val id: String,
     val factorySerialized: String,
+    val initialSerialized: String = factorySerialized,
 ) {
-    QUIET("quiet", "percent|45:10,60:10,75:25,90:50"),
-    NORMAL("normal", "percent|30:15,50:15,65:25,80:40,90:75"),
-    PERFORMANCE("performance", "percent|30:20,45:20,60:30,75:50,85:100"),
+    QUIET(
+        "quiet",
+        "percent|45:10,60:10,75:25,90:50",
+        "percent|50:10,60:10,75:25,90:50",
+    ),
+    NORMAL(
+        "normal",
+        "percent|30:15,50:15,65:25,80:40,90:75",
+        "percent|50:15,65:25,80:40,90:75",
+    ),
+    PERFORMANCE(
+        "performance",
+        "percent|30:20,45:20,60:30,75:50,85:100",
+        "percent|30:20,45:20,60:30,75:50,90:85",
+    ),
     LEGACY_CUSTOM("legacy-custom", "percent|50:10,65:10,80:25,90:50");
 
     val factoryPoints: List<FanCurvePoint> by lazy {
         FanCurveSerializer.parse(factorySerialized)
+    }
+
+    val initialPoints: List<FanCurvePoint> by lazy {
+        FanCurveSerializer.parse(initialSerialized)
     }
 
     companion object {
@@ -95,7 +112,7 @@ data class FanCurveCatalog(
                 FanCurveProfile(
                     id = builtIn.id,
                     builtIn = builtIn,
-                    points = builtIn.factoryPoints,
+                    points = builtIn.initialPoints,
                     defaultPoints = builtIn.factoryPoints,
                 )
             }

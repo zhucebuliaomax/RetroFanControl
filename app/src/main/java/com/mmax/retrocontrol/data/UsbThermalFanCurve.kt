@@ -11,8 +11,9 @@ data class UsbThermalFanControl(
         const val PROFILE_ID = "usb-thermal"
 
         val factoryPoints = listOf(
-            FanCurvePoint(tempC = 43, speedPercent = 47),
-            FanCurvePoint(tempC = 45, speedPercent = 69),
+            FanCurvePoint(tempC = 45, speedPercent = 20),
+            FanCurvePoint(tempC = 60, speedPercent = 20),
+            FanCurvePoint(tempC = 80, speedPercent = 40),
         )
 
         fun factoryProfile() = FanCurveProfile(

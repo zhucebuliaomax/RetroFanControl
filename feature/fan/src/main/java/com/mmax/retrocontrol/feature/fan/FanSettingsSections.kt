@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
@@ -75,9 +76,10 @@ fun FanProfilesSection(
                         profile.controlPointCount,
                     ),
                     index = index + 1,
-                    count = itemCount,
-                    onClick = { onProfileSelected(profile.id) },
-                    modifier = profileModifier(index),
+                count = itemCount,
+                onClick = { onProfileSelected(profile.id) },
+                showChevron = true,
+                modifier = profileModifier(index),
                 )
             }
         }
@@ -109,6 +111,7 @@ private fun FanProfileListItem(
     index: Int,
     count: Int,
     onClick: () -> Unit,
+    showChevron: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     SecondaryMenuListItem(
@@ -128,6 +131,11 @@ private fun FanProfileListItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        },
+        trailingContent = if (showChevron) {
+            { Icon(Icons.Default.ChevronRight, contentDescription = null) }
+        } else {
+            null
         },
         modifier = modifier,
     )

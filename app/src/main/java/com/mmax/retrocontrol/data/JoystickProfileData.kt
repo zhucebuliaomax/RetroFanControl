@@ -62,7 +62,7 @@ sealed interface JoystickSelectionSource {
 
 data class JoystickSelectionConfig(
     val source: JoystickSelectionSource = JoystickSelectionSource.FollowProfile,
-    val enabled: Boolean = true,
+    val enabled: Boolean = false,
 )
 
 object JoystickSelectionPreferences {
@@ -79,7 +79,7 @@ object JoystickSelectionPreferences {
         }
         return JoystickSelectionConfig(
             source = source,
-            enabled = prefs.getBoolean(Prefs.JOYSTICK_TILE_ENABLED, true),
+            enabled = prefs.getBoolean(Prefs.JOYSTICK_TILE_ENABLED, false),
         ).also { config ->
             if (!prefs.contains(Prefs.JOYSTICK_SELECTION_SOURCE)) persist(prefs, config)
         }

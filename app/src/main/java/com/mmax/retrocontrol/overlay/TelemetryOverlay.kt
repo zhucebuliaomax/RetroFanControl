@@ -81,8 +81,8 @@ class TelemetryOverlay(
 
     fun show() {
         if (host != null) return
-        posX = prefs.getInt(Prefs.OVERLAY_X, 100)
-        posY = prefs.getInt(Prefs.OVERLAY_Y, 100)
+        posX = prefs.getInt(Prefs.OVERLAY_X, Prefs.DEFAULT_OVERLAY_X)
+        posY = prefs.getInt(Prefs.OVERLAY_Y, Prefs.DEFAULT_OVERLAY_Y)
 
         mainHandler.post {
             if (host != null) return@post

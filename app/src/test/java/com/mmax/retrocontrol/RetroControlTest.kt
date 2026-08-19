@@ -37,13 +37,14 @@ import org.junit.Test
 
 class RetroControlTest {
     @Test
-    fun usbThermalFanCurve_matchesKernelThresholdsByDefault() {
+    fun usbThermalFanCurve_matchesBundledDefaultConfiguration() {
         val points = UsbThermalFanControl.factoryPoints
 
-        assertEquals(0.0, FanCurveSerializer.interpolate(42.9, points), 0.0)
-        assertEquals(47.0, FanCurveSerializer.interpolate(43.0, points), 0.0)
-        assertEquals(58.0, FanCurveSerializer.interpolate(44.0, points), 0.0)
-        assertEquals(69.0, FanCurveSerializer.interpolate(45.0, points), 0.0)
+        assertEquals(0.0, FanCurveSerializer.interpolate(44.9, points), 0.0)
+        assertEquals(20.0, FanCurveSerializer.interpolate(45.0, points), 0.0)
+        assertEquals(20.0, FanCurveSerializer.interpolate(60.0, points), 0.0)
+        assertEquals(30.0, FanCurveSerializer.interpolate(70.0, points), 0.0)
+        assertEquals(40.0, FanCurveSerializer.interpolate(80.0, points), 0.0)
     }
 
     @Test
@@ -174,7 +175,7 @@ class RetroControlTest {
         val config = ControlPresetConfig()
 
         assertEquals(
-            listOf("Games", "Other apps"),
+            listOf("Game", "Other apps"),
             config.catalog.presets.map { it.name },
         )
         assertEquals(ControlPresetCatalog.DEFAULT_ID, config.selectedPresetId)
@@ -269,13 +270,14 @@ class RetroControlTest {
 
         assertEquals(customQuiet, updated.profile(BuiltInFanCurve.QUIET.id)?.points)
         assertEquals(
-            BuiltInFanCurve.NORMAL.factoryPoints,
+            BuiltInFanCurve.NORMAL.initialPoints,
             updated.profile(BuiltInFanCurve.NORMAL.id)?.points,
         )
         assertEquals(
-            BuiltInFanCurve.PERFORMANCE.factoryPoints,
+            BuiltInFanCurve.PERFORMANCE.initialPoints,
             updated.profile(BuiltInFanCurve.PERFORMANCE.id)?.points,
         )
+        assertEquals(3, updated.profiles.size)
     }
 
     @Test

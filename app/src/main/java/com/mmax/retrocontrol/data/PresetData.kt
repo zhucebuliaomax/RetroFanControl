@@ -49,7 +49,7 @@ data class ControlPresetCatalog(
 
         fun defaultPreset(): ControlPreset = ControlPreset(
             id = DEFAULT_ID,
-            name = "Games",
+            name = "Game",
             isDefault = true,
             fanCurveId = BuiltInFanCurve.NORMAL.id,
             buttonLayoutId = ButtonLayoutProfileCatalog.NINTENDO_ID,

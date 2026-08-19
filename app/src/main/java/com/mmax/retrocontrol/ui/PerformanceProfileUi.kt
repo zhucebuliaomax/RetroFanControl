@@ -78,8 +78,10 @@ fun PerformanceProfilesSection(
                     index = index,
                     count = config.profiles.size,
                     onClick = { onProfileSelected(profile.id) },
-                    trailingContent = {
-                        Icon(Icons.Default.ChevronRight, contentDescription = null)
+                    trailingContent = if (profile.isEditable) {
+                        { Icon(Icons.Default.ChevronRight, contentDescription = null) }
+                    } else {
+                        null
                     },
                     supportingContent = { Text(profile.frequencySummary(config.policies)) },
                     modifier = profileModifier(index).bringIntoViewOnFocus(),
