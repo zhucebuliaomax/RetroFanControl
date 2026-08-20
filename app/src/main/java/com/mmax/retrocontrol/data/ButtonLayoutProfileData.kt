@@ -103,8 +103,27 @@ data class ButtonLayoutProfileCatalog(
         val factoryIds: Set<String> = setOf(XBOX_ID, NINTENDO_ID)
 
         fun factoryProfiles(): List<ButtonLayoutProfile> = listOf(
-            ButtonLayoutProfile(NINTENDO_ID, "Nintendo", FaceButtonLayout.NINTENDO),
-            ButtonLayoutProfile(XBOX_ID, "Xbox", FaceButtonLayout.XBOX),
+            factoryProfile(NINTENDO_ID),
+            factoryProfile(XBOX_ID),
+        )
+
+        private fun factoryProfile(id: String): ButtonLayoutProfile = ButtonLayoutProfile(
+            id = id,
+            name = requireNotNull(
+                BundledDefaultConfig.itemString("button-layout-profile", id, "name")
+            ),
+            layout = FaceButtonLayout.valueOf(requireNotNull(
+                BundledDefaultConfig.itemString("button-layout-profile", id, "layout")
+            ).uppercase()),
+            m1 = GamepadButtonMapping.valueOf(requireNotNull(
+                BundledDefaultConfig.itemString("button-layout-profile", id, "m1")
+            ).uppercase()),
+            m2 = GamepadButtonMapping.valueOf(requireNotNull(
+                BundledDefaultConfig.itemString("button-layout-profile", id, "m2")
+            ).uppercase()),
+            triggerMode = GamepadTriggerMode.valueOf(requireNotNull(
+                BundledDefaultConfig.itemString("button-layout-profile", id, "triggerMode")
+            ).uppercase()),
         )
     }
 }
@@ -316,9 +335,11 @@ object ButtonLayoutTilePreferences {
     fun selectedProfileId(
         prefs: SharedPreferences,
         catalog: ButtonLayoutProfileCatalog,
-    ): String? = prefs.getString(Prefs.BUTTON_LAYOUT_TILE_PROFILE, null)
+    ): String? = prefs.getString(
+        Prefs.BUTTON_LAYOUT_TILE_PROFILE,
+        BundledDefaultConfig.nullableSettingString("buttonLayoutTileId"),
+    )
         ?.takeIf { catalog.profile(it) != null }
-        ?: catalog.profile(ButtonLayoutProfileCatalog.NINTENDO_ID)?.id
 
     fun select(prefs: SharedPreferences, profileId: String) {
         prefs.edit { putString(Prefs.BUTTON_LAYOUT_TILE_PROFILE, profileId) }

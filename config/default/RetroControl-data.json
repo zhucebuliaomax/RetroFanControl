@@ -1,0 +1,68 @@
+{
+  "format": "retro-control-data",
+  "version": 1,
+  "items": [
+    {
+      "format": "retro-control-item",
+      "version": 1,
+      "type": "fan-curve",
+      "name": "Quiet",
+      "data": {
+        "name": "Quiet",
+        "points": [{"temperatureC": 50, "speedPercent": 10}, {"temperatureC": 60, "speedPercent": 10}, {"temperatureC": 75, "speedPercent": 25}, {"temperatureC": 90, "speedPercent": 50}],
+        "defaultPoints": [{"temperatureC": 50, "speedPercent": 10}, {"temperatureC": 60, "speedPercent": 10}, {"temperatureC": 75, "speedPercent": 25}, {"temperatureC": 90, "speedPercent": 50}]
+      },
+      "sourceId": "quiet"
+    },
+    {
+      "format": "retro-control-item",
+      "version": 1,
+      "type": "fan-curve",
+      "name": "Normal",
+      "data": {
+        "name": "Normal",
+        "points": [{"temperatureC": 50, "speedPercent": 15}, {"temperatureC": 65, "speedPercent": 25}, {"temperatureC": 80, "speedPercent": 40}, {"temperatureC": 90, "speedPercent": 75}],
+        "defaultPoints": [{"temperatureC": 50, "speedPercent": 15}, {"temperatureC": 65, "speedPercent": 25}, {"temperatureC": 80, "speedPercent": 40}, {"temperatureC": 90, "speedPercent": 75}]
+      },
+      "sourceId": "normal"
+    },
+    {
+      "format": "retro-control-item",
+      "version": 1,
+      "type": "fan-curve",
+      "name": "Performance",
+      "data": {
+        "name": "Performance",
+        "points": [{"temperatureC": 30, "speedPercent": 20}, {"temperatureC": 45, "speedPercent": 20}, {"temperatureC": 60, "speedPercent": 30}, {"temperatureC": 75, "speedPercent": 50}, {"temperatureC": 90, "speedPercent": 100}],
+        "defaultPoints": [{"temperatureC": 30, "speedPercent": 20}, {"temperatureC": 45, "speedPercent": 20}, {"temperatureC": 60, "speedPercent": 30}, {"temperatureC": 75, "speedPercent": 50}, {"temperatureC": 90, "speedPercent": 100}]
+      },
+      "sourceId": "performance"
+    },
+    {"format": "retro-control-item", "version": 1, "type": "button-layout-profile", "name": "Nintendo", "data": {"name": "Nintendo", "layout": "nintendo", "m1": "none", "m2": "none", "triggerMode": "both"}, "sourceId": "button-layout-nintendo"},
+    {"format": "retro-control-item", "version": 1, "type": "button-layout-profile", "name": "Xbox", "data": {"name": "Xbox", "layout": "xbox", "m1": "none", "m2": "none", "triggerMode": "both"}, "sourceId": "button-layout-xbox"},
+    {"format": "retro-control-item", "version": 1, "type": "profile", "name": "Game", "data": {"fanCurveId": "normal", "joystickId": null, "buttonLayoutId": "button-layout-nintendo", "performanceProfileId": "performance-stock"}, "sourceId": "default"},
+    {"format": "retro-control-item", "version": 1, "type": "profile", "name": "Other apps", "data": {"fanCurveId": "normal", "joystickId": null, "buttonLayoutId": "button-layout-nintendo", "performanceProfileId": "performance-stock"}, "sourceId": "other-apps"}
+  ],
+  "apps": [],
+  "settings": {
+    "gamePresetId": "default",
+    "nonGamePresetId": "other-apps",
+    "fanCurveId": "normal",
+    "fanEnabled": true,
+    "joystickProfileId": null,
+    "joystickEnabled": true,
+    "buttonLayoutTileId": "button-layout-nintendo",
+    "performanceTileId": "performance-stock",
+    "overlayEnabled": false,
+    "autoStartEnabled": true,
+    "profileSwitchToastsEnabled": false,
+    "usbThermalControlEnabled": true,
+    "usbThermalFanCurve": "percent|50:20,60:20,80:40",
+    "usbThermalFanCurveDefault": "percent|50:20,60:20,80:40",
+    "thermalProtectionDisabled": false,
+    "preserveBypassCharging": false,
+    "chargingThreshold": 80,
+    "overlayX": 114,
+    "overlayY": 81
+  }
+}

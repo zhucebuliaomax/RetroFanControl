@@ -329,9 +329,11 @@ object PerformanceTilePreferences {
     fun selectedProfileId(
         prefs: SharedPreferences,
         profileConfig: PerformanceProfileConfig,
-    ): String? = prefs.getString(Prefs.PERFORMANCE_TILE_PROFILE, null)
+    ): String? = prefs.getString(
+        Prefs.PERFORMANCE_TILE_PROFILE,
+        BundledDefaultConfig.nullableSettingString("performanceTileId"),
+    )
         ?.takeIf { profileConfig.profile(it) != null }
-        ?: profileConfig.stockProfile?.id
 
     fun select(prefs: SharedPreferences, profileId: String) {
         prefs.edit { putString(Prefs.PERFORMANCE_TILE_PROFILE, profileId) }

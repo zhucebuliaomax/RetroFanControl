@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -234,7 +235,7 @@ fun PerformanceProfileEditorDialog(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         name = renameDraft.trim()
                         showRename = false
@@ -260,11 +261,15 @@ fun PerformanceProfileEditorDialog(
                 Text(stringResource(R.string.delete_performance_profile_confirmation, name))
             },
             confirmButton = {
-                TextButton(onClick = onDelete, shapes = ButtonDefaults.shapes()) {
-                    Text(
-                        text = stringResource(R.string.delete),
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                Button(
+                    onClick = onDelete,
+                    shapes = ButtonDefaults.shapes(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+                ) {
+                    Text(text = stringResource(R.string.delete))
                 }
             },
             dismissButton = {

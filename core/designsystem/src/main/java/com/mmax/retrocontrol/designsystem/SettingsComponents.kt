@@ -440,7 +440,9 @@ fun SettingsListDialog(
                     repeat(itemCount) { index ->
                         val enabled = itemEnabled(index)
                         SegmentedListItem(
-                            onClick = { onItemClick(index) },
+                            onClick = {
+                                if (showRadio) onSelected(index) else onItemClick(index)
+                            },
                             enabled = enabled,
                             shapes = ListItemDefaults.segmentedShapes(index, actionCount),
                             leadingContent = if (showRadio) {

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -361,7 +362,7 @@ fun PresetEditorDialog(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         onRename(renameDraft)
                         showRename = false
@@ -434,7 +435,14 @@ private fun DeletePresetConfirmation(
         title = { Text(stringResource(R.string.delete_preset)) },
         text = { Text(stringResource(R.string.delete_preset_confirmation, name)) },
         confirmButton = {
-            TextButton(onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
+            Button(
+                onClick = onConfirm,
+                shapes = ButtonDefaults.shapes(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ),
+            ) {
                 Text(stringResource(R.string.delete))
             }
         },

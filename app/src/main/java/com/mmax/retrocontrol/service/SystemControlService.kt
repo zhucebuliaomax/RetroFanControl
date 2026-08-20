@@ -26,6 +26,7 @@ import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.ButtonLayoutProfile
 import com.mmax.retrocontrol.data.ButtonLayoutProfilePreferences
 import com.mmax.retrocontrol.data.ButtonLayoutTilePreferences
+import com.mmax.retrocontrol.data.BundledDefaultConfig
 import com.mmax.retrocontrol.data.CpuFrequencyPolicy
 import com.mmax.retrocontrol.data.FanSelectionPreferences
 import com.mmax.retrocontrol.data.FanControlConfig
@@ -497,7 +498,10 @@ class SystemControlService : Service() {
     }
 
     private fun loadOverlayPreference() {
-        overlayEnabled = prefs.getBoolean(Prefs.OVERLAY_ENABLED, false)
+        overlayEnabled = prefs.getBoolean(
+            Prefs.OVERLAY_ENABLED,
+            BundledDefaultConfig.settingBoolean("overlayEnabled"),
+        )
     }
 
     private fun applyChargingControl(batteryOverride: BatteryConnectionState? = null) {
@@ -509,7 +513,10 @@ class SystemControlService : Service() {
     }
 
     private fun applyKernelThermalPreferences() {
-        val protectionDisabled = prefs.getBoolean(Prefs.THERMAL_PROTECTION_DISABLED, false)
+        val protectionDisabled = prefs.getBoolean(
+            Prefs.THERMAL_PROTECTION_DISABLED,
+            BundledDefaultConfig.settingBoolean("thermalProtectionDisabled"),
+        )
         scope.launch {
             KernelFanThermalController.apply(
                 prefs = prefs,
@@ -1049,7 +1056,11 @@ class SystemControlService : Service() {
 
     private fun showProfileSwitchToast(packageName: String?) {
         if (packageName.isNullOrBlank()) return
-        if (!prefs.getBoolean(Prefs.PROFILE_SWITCH_TOASTS_ENABLED, false)) return
+        if (!prefs.getBoolean(
+                Prefs.PROFILE_SWITCH_TOASTS_ENABLED,
+                BundledDefaultConfig.settingBoolean("profileSwitchToastsEnabled"),
+            )
+        ) return
 
         val fanCatalog = FanCurvePreferences.load(prefs).catalog
         val joystickCatalog = JoystickProfilePreferences.load(prefs)

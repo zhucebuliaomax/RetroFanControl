@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -292,7 +293,7 @@ fun ButtonLayoutProfileEditorDialog(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         onRename(renameDraft)
                         showRename = false
@@ -349,7 +350,14 @@ private fun DeleteButtonLayoutConfirmation(
         title = { Text(stringResource(R.string.delete_button_layout)) },
         text = { Text(stringResource(R.string.delete_button_layout_confirmation, name)) },
         confirmButton = {
-            TextButton(onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
+            Button(
+                onClick = onConfirm,
+                shapes = ButtonDefaults.shapes(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ),
+            ) {
                 Text(stringResource(R.string.delete))
             }
         },

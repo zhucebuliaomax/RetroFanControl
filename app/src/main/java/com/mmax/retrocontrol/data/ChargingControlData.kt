@@ -60,7 +60,7 @@ object ChargingControlPreferences {
     const val MIN_THRESHOLD = 50
     const val MAX_THRESHOLD = 100
     const val THRESHOLD_STEP = 5
-    const val DEFAULT_THRESHOLD = 80
+    val DEFAULT_THRESHOLD = BundledDefaultConfig.settingInt("chargingThreshold")
 
     fun load(prefs: SharedPreferences): ChargingControlState = ChargingControlState(
         mode = prefs.getString(Prefs.CHARGING_MODE, null)
@@ -108,7 +108,10 @@ object ChargingControlPreferences {
         setMode(prefs, ChargingMode.THRESHOLD)
 
     fun isPreserveEnabled(prefs: SharedPreferences): Boolean =
-        prefs.getBoolean(Prefs.PRESERVE_BYPASS_CHARGING, false)
+        prefs.getBoolean(
+            Prefs.PRESERVE_BYPASS_CHARGING,
+            BundledDefaultConfig.settingBoolean("preserveBypassCharging"),
+        )
 
     fun setPreserveEnabled(prefs: SharedPreferences, enabled: Boolean) {
         prefs.edit { putBoolean(Prefs.PRESERVE_BYPASS_CHARGING, enabled) }

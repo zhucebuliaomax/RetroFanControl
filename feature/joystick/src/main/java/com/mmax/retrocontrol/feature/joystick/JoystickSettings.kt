@@ -289,7 +289,7 @@ fun JoystickProfileEditorDialog(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         onRename(renameDraft)
                         showRename = false
@@ -595,7 +595,14 @@ private fun DeleteProfileConfirmation(
             Text(stringResource(R.string.joystick_delete_profile_confirmation, name))
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
+            Button(
+                onClick = onConfirm,
+                shapes = ButtonDefaults.shapes(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ),
+            ) {
                 Text(stringResource(R.string.joystick_delete))
             }
         },

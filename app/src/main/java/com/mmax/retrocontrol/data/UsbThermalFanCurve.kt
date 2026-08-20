@@ -4,21 +4,22 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 
 data class UsbThermalFanControl(
-    val enabled: Boolean = true,
+    val enabled: Boolean = BundledDefaultConfig.settingBoolean("usbThermalControlEnabled"),
     val profile: FanCurveProfile = factoryProfile(),
 ) {
     companion object {
         const val PROFILE_ID = "usb-thermal"
 
-        val factoryPoints = listOf(
-            FanCurvePoint(tempC = 45, speedPercent = 20),
-            FanCurvePoint(tempC = 60, speedPercent = 20),
-            FanCurvePoint(tempC = 80, speedPercent = 40),
+        val factoryPoints = FanCurveSerializer.parse(
+            BundledDefaultConfig.settingString("usbThermalFanCurveDefault")
+        )
+        val initialPoints = FanCurveSerializer.parse(
+            BundledDefaultConfig.settingString("usbThermalFanCurve")
         )
 
         fun factoryProfile() = FanCurveProfile(
             id = PROFILE_ID,
-            points = factoryPoints,
+            points = initialPoints,
             defaultPoints = factoryPoints,
         )
     }
@@ -29,14 +30,17 @@ object UsbThermalFanCurvePreferences {
         val factory = UsbThermalFanControl.factoryPoints
         val points = FanCurveSerializer.parse(
             prefs.getString(Prefs.USB_THERMAL_FAN_CURVE, null),
-            factory,
+            UsbThermalFanControl.initialPoints,
         )
         val defaults = FanCurveSerializer.parse(
             prefs.getString(Prefs.USB_THERMAL_FAN_CURVE_DEFAULT, null),
             factory,
         )
         return UsbThermalFanControl(
-            enabled = prefs.getBoolean(Prefs.USB_THERMAL_CONTROL_ENABLED, true),
+            enabled = prefs.getBoolean(
+                Prefs.USB_THERMAL_CONTROL_ENABLED,
+                BundledDefaultConfig.settingBoolean("usbThermalControlEnabled"),
+            ),
             profile = UsbThermalFanControl.factoryProfile().copy(
                 points = points,
                 defaultPoints = defaults,

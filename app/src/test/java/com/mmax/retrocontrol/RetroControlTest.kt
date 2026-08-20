@@ -40,8 +40,8 @@ class RetroControlTest {
     fun usbThermalFanCurve_matchesBundledDefaultConfiguration() {
         val points = UsbThermalFanControl.factoryPoints
 
-        assertEquals(0.0, FanCurveSerializer.interpolate(44.9, points), 0.0)
-        assertEquals(20.0, FanCurveSerializer.interpolate(45.0, points), 0.0)
+        assertEquals(0.0, FanCurveSerializer.interpolate(49.9, points), 0.0)
+        assertEquals(20.0, FanCurveSerializer.interpolate(50.0, points), 0.0)
         assertEquals(20.0, FanCurveSerializer.interpolate(60.0, points), 0.0)
         assertEquals(30.0, FanCurveSerializer.interpolate(70.0, points), 0.0)
         assertEquals(40.0, FanCurveSerializer.interpolate(80.0, points), 0.0)

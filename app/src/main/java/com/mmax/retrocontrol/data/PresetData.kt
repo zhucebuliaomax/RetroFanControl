@@ -49,18 +49,36 @@ data class ControlPresetCatalog(
 
         fun defaultPreset(): ControlPreset = ControlPreset(
             id = DEFAULT_ID,
-            name = "Game",
+            name = requireNotNull(BundledDefaultConfig.itemString("profile", DEFAULT_ID, "name")),
             isDefault = true,
-            fanCurveId = BuiltInFanCurve.NORMAL.id,
-            buttonLayoutId = ButtonLayoutProfileCatalog.NINTENDO_ID,
+            fanCurveId = BundledDefaultConfig.itemString("profile", DEFAULT_ID, "fanCurveId"),
+            joystickId = BundledDefaultConfig.itemString("profile", DEFAULT_ID, "joystickId"),
+            buttonLayoutId = BundledDefaultConfig.itemString(
+                "profile", DEFAULT_ID, "buttonLayoutId"
+            ),
+            performanceProfileId = BundledDefaultConfig.itemString(
+                "profile", DEFAULT_ID, "performanceProfileId"
+            ),
         )
 
         fun otherAppsPreset(): ControlPreset = ControlPreset(
             id = OTHER_APPS_ID,
-            name = "Other apps",
+            name = requireNotNull(
+                BundledDefaultConfig.itemString("profile", OTHER_APPS_ID, "name")
+            ),
             isDefault = true,
-            fanCurveId = BuiltInFanCurve.NORMAL.id,
-            buttonLayoutId = ButtonLayoutProfileCatalog.NINTENDO_ID,
+            fanCurveId = BundledDefaultConfig.itemString(
+                "profile", OTHER_APPS_ID, "fanCurveId"
+            ),
+            joystickId = BundledDefaultConfig.itemString(
+                "profile", OTHER_APPS_ID, "joystickId"
+            ),
+            buttonLayoutId = BundledDefaultConfig.itemString(
+                "profile", OTHER_APPS_ID, "buttonLayoutId"
+            ),
+            performanceProfileId = BundledDefaultConfig.itemString(
+                "profile", OTHER_APPS_ID, "performanceProfileId"
+            ),
         )
     }
 }
@@ -68,8 +86,8 @@ data class ControlPresetCatalog(
 data class ControlPresetConfig(
     val catalog: ControlPresetCatalog = ControlPresetCatalog(),
     /** Default profile for games. Kept under the legacy property name for migration. */
-    val selectedPresetId: String = ControlPresetCatalog.DEFAULT_ID,
-    val selectedNonGamePresetId: String = ControlPresetCatalog.OTHER_APPS_ID,
+    val selectedPresetId: String = BundledDefaultConfig.settingString("gamePresetId"),
+    val selectedNonGamePresetId: String = BundledDefaultConfig.settingString("nonGamePresetId"),
 ) {
     val selectedPreset: ControlPreset
         get() = catalog.preset(selectedPresetId)

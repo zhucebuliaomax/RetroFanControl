@@ -16,6 +16,7 @@ import com.mmax.retrocontrol.data.AppProfilePreferences
 import com.mmax.retrocontrol.data.AmbilightPreferences
 import com.mmax.retrocontrol.data.BuiltInFanCurve
 import com.mmax.retrocontrol.data.BuiltInPerformanceProfile
+import com.mmax.retrocontrol.data.BundledDefaultConfig
 import com.mmax.retrocontrol.data.ButtonLayoutProfileCatalog
 import com.mmax.retrocontrol.data.ButtonLayoutProfilePreferences
 import com.mmax.retrocontrol.data.ButtonLayoutTilePreferences
@@ -79,13 +80,16 @@ data class DashboardState(
         source = com.mmax.retrocontrol.data.FanSelectionSource.FollowPreset,
         enabled = true,
     ),
-    val overlayEnabled: Boolean = false,
-    val autoStartEnabled: Boolean = true,
-    val profileSwitchToastsEnabled: Boolean = false,
+    val overlayEnabled: Boolean = BundledDefaultConfig.settingBoolean("overlayEnabled"),
+    val autoStartEnabled: Boolean = BundledDefaultConfig.settingBoolean("autoStartEnabled"),
+    val profileSwitchToastsEnabled: Boolean =
+        BundledDefaultConfig.settingBoolean("profileSwitchToastsEnabled"),
     val usbThermalControl: UsbThermalFanControl = UsbThermalFanControl(),
-    val thermalProtectionDisabled: Boolean = false,
+    val thermalProtectionDisabled: Boolean =
+        BundledDefaultConfig.settingBoolean("thermalProtectionDisabled"),
     val ambilightLeftStickLower: Boolean = false,
-    val preserveBypassCharging: Boolean = false,
+    val preserveBypassCharging: Boolean =
+        BundledDefaultConfig.settingBoolean("preserveBypassCharging"),
     val chargingThreshold: Int = ChargingControlPreferences.DEFAULT_THRESHOLD,
     val installedApps: List<InstalledAppInfo> = emptyList(),
     val appProfiles: Map<String, AppControlProfile> = emptyMap(),
@@ -187,16 +191,22 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     performanceIds,
                     buttonLayoutIds,
                 ),
-                overlayEnabled = prefs.getBoolean(Prefs.OVERLAY_ENABLED, false),
-                autoStartEnabled = prefs.getBoolean(Prefs.AUTO_START_ENABLED, true),
+                overlayEnabled = prefs.getBoolean(
+                    Prefs.OVERLAY_ENABLED,
+                    BundledDefaultConfig.settingBoolean("overlayEnabled"),
+                ),
+                autoStartEnabled = prefs.getBoolean(
+                    Prefs.AUTO_START_ENABLED,
+                    BundledDefaultConfig.settingBoolean("autoStartEnabled"),
+                ),
                 profileSwitchToastsEnabled = prefs.getBoolean(
                     Prefs.PROFILE_SWITCH_TOASTS_ENABLED,
-                    false,
+                    BundledDefaultConfig.settingBoolean("profileSwitchToastsEnabled"),
                 ),
                 usbThermalControl = UsbThermalFanCurvePreferences.load(prefs),
                 thermalProtectionDisabled = prefs.getBoolean(
                     Prefs.THERMAL_PROTECTION_DISABLED,
-                    false,
+                    BundledDefaultConfig.settingBoolean("thermalProtectionDisabled"),
                 ),
                 ambilightLeftStickLower = AmbilightPreferences.leftStickLayout(prefs) ==
                     AmbilightPreferences.LeftStickLayout.LOWER,

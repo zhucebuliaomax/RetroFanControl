@@ -18,18 +18,18 @@ enum class BuiltInFanCurve(
 ) {
     QUIET(
         "quiet",
-        "percent|45:10,60:10,75:25,90:50",
-        "percent|50:10,60:10,75:25,90:50",
+        BundledDefaultConfig.fanCurveSerialized("quiet", "defaultPoints"),
+        BundledDefaultConfig.fanCurveSerialized("quiet", "points"),
     ),
     NORMAL(
         "normal",
-        "percent|30:15,50:15,65:25,80:40,90:75",
-        "percent|50:15,65:25,80:40,90:75",
+        BundledDefaultConfig.fanCurveSerialized("normal", "defaultPoints"),
+        BundledDefaultConfig.fanCurveSerialized("normal", "points"),
     ),
     PERFORMANCE(
         "performance",
-        "percent|30:20,45:20,60:30,75:50,85:100",
-        "percent|30:20,45:20,60:30,75:50,90:85",
+        BundledDefaultConfig.fanCurveSerialized("performance", "defaultPoints"),
+        BundledDefaultConfig.fanCurveSerialized("performance", "points"),
     ),
     LEGACY_CUSTOM("legacy-custom", "percent|50:10,65:10,80:25,90:50");
 
@@ -122,7 +122,9 @@ data class FanCurveCatalog(
 data class FanControlConfig(
     val catalog: FanCurveCatalog = FanCurveCatalog(),
     /** Null means fan control is off. */
-    val activeProfileId: String? = BuiltInFanCurve.NORMAL.id,
+    val activeProfileId: String? = BundledDefaultConfig
+        .nullableSettingString("fanCurveId")
+        .takeIf { BundledDefaultConfig.settingBoolean("fanEnabled") },
 ) {
     val activeProfile: FanCurveProfile? get() = catalog.profile(activeProfileId)
     val enabled: Boolean get() = activeProfile != null

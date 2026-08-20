@@ -1,8 +1,8 @@
 package com.mmax.retrocontrol.data
 
 object Prefs {
-    const val DEFAULT_OVERLAY_X = 114
-    const val DEFAULT_OVERLAY_Y = 81
+    val DEFAULT_OVERLAY_X = BundledDefaultConfig.settingInt("overlayX")
+    val DEFAULT_OVERLAY_Y = BundledDefaultConfig.settingInt("overlayY")
 
     const val FILE = "retro_control"
     const val KERNEL_FAN_TRIP_ORIGINAL_PREFIX = "kernel_fan_trip_original_v1_"

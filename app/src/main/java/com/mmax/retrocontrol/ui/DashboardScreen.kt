@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -1109,14 +1110,15 @@ fun DashboardScreen(
             title = { Text(stringResource(R.string.reset_all_data)) },
             text = { Text(stringResource(R.string.reset_all_data_confirmation)) },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         vm.resetAllData()
                         showResetDataDialog = false
                         Toast.makeText(context, R.string.data_reset, Toast.LENGTH_SHORT).show()
                     },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
                     ),
                 ) { Text(stringResource(R.string.reset)) }
             },
@@ -1538,7 +1540,7 @@ private fun FanCurveEditorDialog(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         if (renameDraft.isNotBlank()) {
                             onRename(renameDraft)
@@ -1564,11 +1566,14 @@ private fun FanCurveEditorDialog(
             title = { Text(stringResource(R.string.delete_curve)) },
             text = { Text(stringResource(R.string.delete_curve_confirmation, profileName)) },
             confirmButton = {
-                TextButton(onClick = onDelete) {
-                    Text(
-                        text = stringResource(R.string.delete),
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                Button(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+                ) {
+                    Text(text = stringResource(R.string.delete))
                 }
             },
             dismissButton = {

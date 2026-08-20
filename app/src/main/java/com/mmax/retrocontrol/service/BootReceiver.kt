@@ -9,6 +9,7 @@ import com.mmax.retrocontrol.RootAccessManager
 import com.mmax.retrocontrol.data.FanCurvePreferences
 import com.mmax.retrocontrol.data.Prefs
 import com.mmax.retrocontrol.data.ChargingControlPreferences
+import com.mmax.retrocontrol.data.BundledDefaultConfig
 import com.mmax.retrocontrol.hardware.BatteryConnectionReader
 import com.mmax.retrocontrol.tile.FanQuickSettingsTile
 import com.mmax.retrocontrol.tile.OverlayTileService
@@ -46,7 +47,11 @@ class BootReceiver : BroadcastReceiver() {
         }
         ChargingQuickSettingsTile.requestRefresh(appContext)
 
-        if (!prefs.getBoolean(Prefs.AUTO_START_ENABLED, true) && !restoreChargingThreshold) {
+        if (!prefs.getBoolean(
+                Prefs.AUTO_START_ENABLED,
+                BundledDefaultConfig.settingBoolean("autoStartEnabled"),
+            ) && !restoreChargingThreshold
+        ) {
             FanCurvePreferences.select(prefs, null)
             FanQuickSettingsTile.requestRefresh(appContext)
             Log.i(TAG, "Boot detected — automatic start is disabled")
