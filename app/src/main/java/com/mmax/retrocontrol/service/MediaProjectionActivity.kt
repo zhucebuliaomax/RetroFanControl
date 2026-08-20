@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
+import com.mmax.retrocontrol.data.AmbilightPreferences
+import com.mmax.retrocontrol.data.Prefs
+import com.mmax.retrocontrol.tile.AmbilightQuickSettingsTile
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MediaProjectionActivity : androidx.activity.ComponentActivity() {
@@ -12,13 +15,26 @@ class MediaProjectionActivity : androidx.activity.ComponentActivity() {
     private val captureLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        captureRequestInFlight.set(false)
-        result.data?.takeIf { result.resultCode == RESULT_OK }?.let { token ->
+        val token = result.data?.takeIf { result.resultCode == RESULT_OK }
+        token?.let {
+            projectionGrantPending.set(true)
+            captureRequestInFlight.set(false)
+            AmbilightPreferences.setEnabled(
+                getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE),
+                true,
+            )
             startForegroundService(
                 Intent(this, SystemControlService::class.java)
                     .setAction(SystemControlService.ACTION_SET_PROJECTION_INTENT)
-                    .putExtra(SystemControlService.EXTRA_PROJECTION_INTENT, token)
+                    .putExtra(SystemControlService.EXTRA_PROJECTION_INTENT, it)
             )
+        } ?: run {
+            captureRequestInFlight.set(false)
+            AmbilightPreferences.setEnabled(
+                getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE),
+                false,
+            )
+            AmbilightQuickSettingsTile.requestRefresh(applicationContext)
         }
         finish()
     }
@@ -38,6 +54,11 @@ class MediaProjectionActivity : androidx.activity.ComponentActivity() {
         runCatching { captureLauncher.launch(manager.createScreenCaptureIntent()) }
             .onFailure {
                 captureRequestInFlight.set(false)
+                AmbilightPreferences.setEnabled(
+                    getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE),
+                    false,
+                )
+                AmbilightQuickSettingsTile.requestRefresh(applicationContext)
                 finish()
             }
     }
@@ -49,6 +70,14 @@ class MediaProjectionActivity : androidx.activity.ComponentActivity() {
 
     companion object {
         private val captureRequestInFlight = AtomicBoolean(false)
+        private val projectionGrantPending = AtomicBoolean(false)
+
+        fun isCaptureSessionPending(): Boolean =
+            captureRequestInFlight.get() || projectionGrantPending.get()
+
+        fun markProjectionGrantConsumed() {
+            projectionGrantPending.set(false)
+        }
 
         fun createIntent(context: Context): Intent =
             Intent(context, MediaProjectionActivity::class.java).addFlags(

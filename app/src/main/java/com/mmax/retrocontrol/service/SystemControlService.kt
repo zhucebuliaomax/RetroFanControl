@@ -95,6 +95,7 @@ class SystemControlService : Service() {
         private const val SYSTEM_UI_PACKAGE = "com.android.systemui"
         const val CHANNEL_ID = "fan_control"
         private const val NOTIFICATION_ID = 1
+        private const val JOYSTICK_THERMAL_SAMPLE_INTERVAL_MS = 2_000L
         const val ACTION_UPDATE = "com.mmax.retrocontrol.UPDATE"
         private const val ACTION_UPDATE_CHARGING =
             "com.mmax.retrocontrol.UPDATE_CHARGING"
@@ -259,6 +260,7 @@ class SystemControlService : Service() {
             val powerChanged = lastChargingPowerConnected != battery.powerConnected
             lastChargingPowerConnected = battery.powerConnected
             if (powerChanged) usbFanRevision++
+            joystickEffects.onBatteryLevelChanged(battery.level)
             when (action) {
                 ChargingConnectionAction.NONE -> Unit
                 ChargingConnectionAction.RESET_TO_NORMAL -> {
@@ -363,6 +365,12 @@ class SystemControlService : Service() {
     override fun onCreate() {
         super.onCreate()
         prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
+        if (
+            AmbilightPreferences.isEnabled(prefs) &&
+            !MediaProjectionActivity.isCaptureSessionPending()
+        ) {
+            AmbilightPreferences.setEnabled(prefs, false)
+        }
         joystickEffects = JoystickEffectEngine(applicationContext, scope)
         createNotificationChannel()
         loadFanPreferences()
@@ -430,7 +438,11 @@ class SystemControlService : Service() {
                 if (token != null && AmbilightPreferences.isEnabled(prefs)) {
                     promoteForMediaProjection()
                     joystickEffects.setMediaProjectionIntent(token)
+                    loadJoystickPreferences(force = true)
+                } else if (token == null) {
+                    AmbilightPreferences.setEnabled(prefs, false)
                 }
+                MediaProjectionActivity.markProjectionGrantConsumed()
             }
             ACTION_PREVIEW_JOYSTICK_PROFILE -> {
                 previewJoystickProfileId = intent.getStringExtra(EXTRA_JOYSTICK_PROFILE_ID)
@@ -504,7 +516,9 @@ class SystemControlService : Service() {
             AmbilightPreferences.leftStickLayout(prefs)
         )
         val catalog = JoystickProfilePreferences.load(prefs)
-        joystickProfile = AmbilightPreferences.takeIf { it.isEnabled(prefs) }?.profile(prefs)
+        joystickProfile = AmbilightPreferences.takeIf {
+            it.isEnabled(prefs) && joystickEffects.hasMediaProjectionIntent
+        }?.profile(prefs)
             ?: previewJoystickProfileId?.let(catalog::profile)
             ?: JoystickProfilePreferences.resolveEffectiveProfile(
                 prefs = prefs,
@@ -806,6 +820,7 @@ class SystemControlService : Service() {
             var thermal = ThermalSnapshot()
             var lastFanSampleMs = 0L
             var lastFanResponseMs = 0L
+            var lastJoystickThermalSampleMs = 0L
             var belowApplicationStart = false
             var fanPercent = 0
             var currentFrequencies = emptyMap<Int, Int>()
@@ -832,6 +847,13 @@ class SystemControlService : Service() {
                 )
 
                 if (!fanControlReady) {
+                    if (
+                        joystickEffects.requiresThermalSampling &&
+                        now - lastJoystickThermalSampleMs >= JOYSTICK_THERMAL_SAMPLE_INTERVAL_MS
+                    ) {
+                        joystickEffects.onThermalSnapshot(ThermalSensorReader.read())
+                        lastJoystickThermalSampleMs = now
+                    }
                     delay(300L)
                     continue
                 }
@@ -859,6 +881,7 @@ class SystemControlService : Service() {
                 val sampleDue = sourceChanged || configChanged ||
                     now - lastFanSampleMs >= sampleInterval
                 var outputToApply: Double? = null
+                var sharedFullThermal: ThermalSnapshot? = null
 
                 if (selectedSource == ActiveFanSource.NONE) {
                     if (sourceChanged || configChanged) {
@@ -868,7 +891,9 @@ class SystemControlService : Service() {
                     }
                 } else if (sampleDue) {
                     thermal = when (selectedSource) {
-                        ActiveFanSource.APPLICATION -> ThermalSensorReader.read()
+                        ActiveFanSource.APPLICATION -> ThermalSensorReader.read().also {
+                            sharedFullThermal = it
+                        }
                         ActiveFanSource.USB -> ThermalSensorReader.readUsb()
                         ActiveFanSource.NONE -> ThermalSnapshot()
                     }
@@ -906,6 +931,20 @@ class SystemControlService : Service() {
                 ) {
                     outputToApply = response.currentLevel(now)
                     lastFanResponseMs = now
+                }
+
+                if (joystickEffects.requiresThermalSampling) {
+                    val joystickThermal = sharedFullThermal ?: if (
+                        now - lastJoystickThermalSampleMs >= JOYSTICK_THERMAL_SAMPLE_INTERVAL_MS
+                    ) {
+                        ThermalSensorReader.read()
+                    } else {
+                        null
+                    }
+                    if (joystickThermal != null) {
+                        joystickEffects.onThermalSnapshot(joystickThermal)
+                        lastJoystickThermalSampleMs = now
+                    }
                 }
 
                 if (outputToApply != null) {
