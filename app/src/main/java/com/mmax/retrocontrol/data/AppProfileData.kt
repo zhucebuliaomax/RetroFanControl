@@ -59,6 +59,38 @@ object AppProfilePreferences {
         return normalized
     }
 
+    fun setImported(
+        prefs: SharedPreferences,
+        profile: AppControlProfile,
+        availablePresetIds: Set<String>,
+        availableFanCurveIds: Set<String>,
+        availableJoystickProfileIds: Set<String>,
+        availablePerformanceProfileIds: Set<String>?,
+        availableButtonLayoutProfileIds: Set<String>?,
+    ): Map<String, AppControlProfile> {
+        require(profile.packageName.isNotBlank())
+        val current = load(
+            prefs,
+            availablePresetIds,
+            availableFanCurveIds,
+            availableJoystickProfileIds,
+            availablePerformanceProfileIds,
+            availableButtonLayoutProfileIds,
+        )
+        val normalized = profile.copy(
+            presetId = profile.presetId?.takeIf(availablePresetIds::contains),
+            fanCurveId = profile.fanCurveId?.takeIf(availableFanCurveIds::contains),
+            joystickId = profile.joystickId?.takeIf(availableJoystickProfileIds::contains),
+            performanceProfileId = profile.performanceProfileId?.takeIf {
+                availablePerformanceProfileIds == null || it in availablePerformanceProfileIds
+            },
+            buttonLayoutId = profile.buttonLayoutId?.takeIf {
+                availableButtonLayoutProfileIds == null || it in availableButtonLayoutProfileIds
+            },
+        )
+        return (current + (profile.packageName to normalized)).also { persist(prefs, it) }
+    }
+
     fun setPreset(
         prefs: SharedPreferences,
         packageName: String,

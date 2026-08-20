@@ -53,6 +53,7 @@ import com.mmax.retrocontrol.data.GamepadButtonMapping
 import com.mmax.retrocontrol.data.GamepadTriggerMode
 import com.mmax.retrocontrol.designsystem.SecondaryMenuList
 import com.mmax.retrocontrol.designsystem.SecondaryMenuListItem
+import com.mmax.retrocontrol.designsystem.TransferContextMenuContainer
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 import com.mmax.retrocontrol.designsystem.settingsSegmentedShapes
 
@@ -97,6 +98,8 @@ fun ButtonLayoutProfilesSection(
     profiles: List<ButtonLayoutProfile>,
     onProfileSelected: (String) -> Unit,
     onDeleteProfile: (String) -> Unit,
+    onImport: () -> Unit,
+    onExport: (String) -> Unit,
     profileModifier: (Int) -> Modifier = { Modifier },
 ) {
     SecondaryMenuList {
@@ -109,19 +112,27 @@ fun ButtonLayoutProfilesSection(
                     stringResource(profile.m2.labelRes),
                     stringResource(profile.triggerMode.labelRes),
                 )
-                SecondaryMenuListItem(
-                    index = index,
-                    count = profiles.size,
-                    onClick = { onProfileSelected(profile.id) },
-                    trailingContent = {
-                        Icon(Icons.Default.ChevronRight, contentDescription = null)
-                    },
-                    modifier = profileModifier(index).bringIntoViewOnFocus(),
-                    supportingContent = { Text(summary) },
-                    content = {
-                        Text(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    },
-                )
+                TransferContextMenuContainer(
+                    importLabel = stringResource(R.string.import_items),
+                    exportLabel = stringResource(R.string.export_items),
+                    onImport = onImport,
+                    onExport = { onExport(profile.id) },
+                ) { onLongClick ->
+                    SecondaryMenuListItem(
+                        index = index,
+                        count = profiles.size,
+                        onClick = { onProfileSelected(profile.id) },
+                        onLongClick = onLongClick,
+                        trailingContent = {
+                            Icon(Icons.Default.ChevronRight, contentDescription = null)
+                        },
+                        modifier = profileModifier(index).bringIntoViewOnFocus(),
+                        supportingContent = { Text(summary) },
+                        content = {
+                            Text(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        },
+                    )
+                }
             }
         }
     }

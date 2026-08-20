@@ -54,6 +54,7 @@ import com.mmax.retrocontrol.data.ControlPreset
 import com.mmax.retrocontrol.designsystem.SecondaryMenuList
 import com.mmax.retrocontrol.designsystem.SecondaryMenuListItem
 import com.mmax.retrocontrol.designsystem.SecondaryMenuSelectableListItem
+import com.mmax.retrocontrol.designsystem.TransferContextMenuContainer
 import com.mmax.retrocontrol.designsystem.settingsSegmentedShapes
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 
@@ -94,17 +95,27 @@ private val PresetListItemUiState.summary: String
 fun PresetManagementSection(
     presets: List<PresetListItemUiState>,
     onPresetClick: (String) -> Unit,
+    onImport: () -> Unit,
+    onExport: (String) -> Unit,
     itemModifier: (Int) -> Modifier = { Modifier },
 ) {
     SecondaryMenuList {
         presets.forEachIndexed { index, preset ->
-            PresetListItem(
-                preset = preset,
-                index = index,
-                count = presets.size,
-                onClick = { onPresetClick(preset.id) },
-                modifier = itemModifier(index),
-            )
+            TransferContextMenuContainer(
+                importLabel = stringResource(R.string.import_items),
+                exportLabel = stringResource(R.string.export_items),
+                onImport = onImport,
+                onExport = { onExport(preset.id) },
+            ) { onLongClick ->
+                PresetListItem(
+                    preset = preset,
+                    index = index,
+                    count = presets.size,
+                    onClick = { onPresetClick(preset.id) },
+                    onLongClick = onLongClick,
+                    modifier = itemModifier(index),
+                )
+            }
         }
     }
 }
@@ -167,12 +178,14 @@ private fun PresetListItem(
     index: Int,
     count: Int,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SecondaryMenuListItem(
         index = index,
         count = count,
         onClick = onClick,
+        onLongClick = onLongClick,
         content = {
             Text(
                 text = preset.name,

@@ -113,8 +113,8 @@ import com.mmax.retrocontrol.RootAccessManager
 import com.mmax.retrocontrol.data.ControlItemJson
 import com.mmax.retrocontrol.data.ControlPresetCatalog
 import com.mmax.retrocontrol.data.FanCurvePoint
-import com.mmax.retrocontrol.data.PerformanceProfile
 import com.mmax.retrocontrol.data.AppProfilePreferences
+import com.mmax.retrocontrol.data.AppControlProfile
 import com.mmax.retrocontrol.data.displayName
 import com.mmax.retrocontrol.designsystem.FocusScrollMargin
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
@@ -124,6 +124,7 @@ import com.mmax.retrocontrol.feature.authorization.R as AuthorizationR
 import com.mmax.retrocontrol.feature.fan.FanProfileItemUiState
 import com.mmax.retrocontrol.feature.fan.FanProfileSectionState
 import com.mmax.retrocontrol.feature.fan.FanProfilesSection
+import com.mmax.retrocontrol.feature.fan.FanProfilesAddCurveButton
 import com.mmax.retrocontrol.feature.joystick.JoystickProfileEditorDialog
 import com.mmax.retrocontrol.feature.joystick.JoystickProfileUiState
 import com.mmax.retrocontrol.feature.joystick.JoystickProfilesSection
@@ -155,7 +156,6 @@ fun DashboardScreen(
     val hasRoot by RootAccessManager.hasRoot.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
-    var exportListKind by remember { mutableStateOf<ExportListKind?>(null) }
     var pendingExportFiles by remember { mutableStateOf<List<PendingExportFile>>(emptyList()) }
     val importItemsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -370,6 +370,73 @@ fun DashboardScreen(
         app.copy(profileSummary = summary)
     }
 
+    fun encodedPreset(presetId: String): String? {
+        val preset = state.presetConfig.catalog.preset(presetId) ?: return null
+        val fanCurve = state.fanConfig.catalog.profile(preset.fanCurveId)
+            ?.let { it.displayName(context) to it }
+        val joystick = state.joystickProfiles.profile(preset.joystickId)
+        val buttonLayout = state.buttonLayoutProfiles.profile(preset.buttonLayoutId)
+        val performance = state.performanceProfiles.profile(preset.performanceProfileId)
+            ?.let { it.displayName(context) to it }
+        return ControlItemJson.encodePreset(
+            preset, fanCurve, joystick, buttonLayout, performance,
+        )
+    }
+
+    fun controlExportFiles(kind: ExportListKind, selectedIds: Set<String>?): List<PendingExportFile> =
+        when (kind) {
+            ExportListKind.PRESET -> state.presetConfig.catalog.presets
+                .filter { selectedIds == null || it.id in selectedIds }
+                .mapNotNull { preset ->
+                    encodedPreset(preset.id)?.let { PendingExportFile(preset.name, it) }
+                }
+            ExportListKind.FAN -> state.fanConfig.catalog.profiles
+                .filter { selectedIds == null || it.id in selectedIds }
+                .map {
+                    val name = it.displayName(context)
+                    PendingExportFile(name, ControlItemJson.encodeFanCurve(name, it))
+                }
+            ExportListKind.JOYSTICK -> state.joystickProfiles.profiles
+                .filter { selectedIds == null || it.id in selectedIds }
+                .map { PendingExportFile(it.name, ControlItemJson.encodeJoystick(it)) }
+            ExportListKind.BUTTON_LAYOUT -> state.buttonLayoutProfiles.profiles
+                .filter { selectedIds == null || it.id in selectedIds }
+                .map { PendingExportFile(it.name, ControlItemJson.encodeButtonLayout(it)) }
+            ExportListKind.PERFORMANCE -> state.performanceProfiles.profiles
+                .filter { selectedIds == null || it.id in selectedIds }
+                .map {
+                    val name = it.displayName(context)
+                    PendingExportFile(name, ControlItemJson.encodePerformance(name, it))
+                }
+        }
+
+    fun beginControlExport(kind: ExportListKind, selectedIds: Set<String>? = null) {
+        pendingExportFiles = controlExportFiles(kind, selectedIds)
+        exportItemsLauncher.launch(controlItemsExportDirectoryIntent())
+    }
+
+    fun beginAppExport(packageName: String) {
+        val app = state.installedApps.firstOrNull { it.packageName == packageName }
+        val name = app?.label ?: packageName
+        val profile = state.appProfiles[packageName] ?: AppControlProfile(packageName)
+        val json = ControlItemJson.encodeAppProfile(
+            name = name,
+            profile = profile,
+            presetJson = profile.presetId?.let(::encodedPreset),
+            fanCurveJson = state.fanConfig.catalog.profile(profile.fanCurveId)?.let {
+                ControlItemJson.encodeFanCurve(it.displayName(context), it)
+            },
+            joystickJson = state.joystickProfiles.profile(profile.joystickId)
+                ?.let(ControlItemJson::encodeJoystick),
+            buttonLayoutJson = state.buttonLayoutProfiles.profile(profile.buttonLayoutId)
+                ?.let(ControlItemJson::encodeButtonLayout),
+            performanceJson = state.performanceProfiles.profile(profile.performanceProfileId)
+                ?.let { ControlItemJson.encodePerformance(it.displayName(context), it) },
+        )
+        pendingExportFiles = listOf(PendingExportFile(name, json))
+        exportItemsLauncher.launch(controlItemsExportDirectoryIntent())
+    }
+
     BackHandler {
         val now = SystemClock.elapsedRealtime()
         if (now - lastBackPressedAt <= 2_000L) {
@@ -499,6 +566,18 @@ fun DashboardScreen(
         controlFocusRequesters = controlFocusRequesters,
         appFocusRequester = appFocusRequester,
         emptyDetailFocusRequester = emptyDetailFocusRequester,
+        onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
+        onExportControl = { control ->
+            val kind = when (control) {
+                ControlModule.PRESET -> ExportListKind.PRESET
+                ControlModule.FAN -> ExportListKind.FAN
+                ControlModule.JOYSTICK -> ExportListKind.JOYSTICK
+                ControlModule.BUTTON_LAYOUT -> ExportListKind.BUTTON_LAYOUT
+                ControlModule.CORE -> ExportListKind.PERFORMANCE
+            }
+            beginControlExport(kind)
+        },
+        onExportApp = ::beginAppExport,
         fanContent = {
             FanProfilesSection(
                 state = FanProfileSectionState(
@@ -513,6 +592,10 @@ fun DashboardScreen(
                 onProfileSelected = { profileId ->
                     editingProfileId = profileId
                 },
+                importLabel = stringResource(R.string.import_items),
+                exportLabel = stringResource(R.string.export_items),
+                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
+                onExport = { beginControlExport(ExportListKind.FAN, setOf(it)) },
                 showTitle = false,
                 offModifier = Modifier
                     .focusRequester(fanProfileFocusRequesters[0])
@@ -544,22 +627,14 @@ fun DashboardScreen(
             )
         },
         fanAction = {
-            ControlTransferFabMenu(
-                addLabel = stringResource(R.string.add_fan_curve),
-                onAdd = {
+            FanProfilesAddCurveButton(
+                onClick = {
                     editingProfileId = vm.addFanCurve(
                         resources.getString(R.string.new_fan_curve)
                     )
                 },
-                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
-                onExport = { exportListKind = ExportListKind.FAN },
-                collapsedUpFocusRequester = fanProfileFocusRequesters.last(),
                 modifier = Modifier
-                    .focusRequester(addCurveFocusRequester)
-                    .focusProperties {
-                        left = FocusRequester.Default
-                        right = FocusRequester.Default
-                    },
+                    .focusRequester(addCurveFocusRequester),
             )
         },
         joystickContent = {
@@ -577,6 +652,10 @@ fun DashboardScreen(
                 },
                 onProfileSelected = { editingJoystickProfileId = it },
                 onDeleteProfile = vm::deleteJoystickProfile,
+                importLabel = stringResource(R.string.import_items),
+                exportLabel = stringResource(R.string.export_items),
+                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
+                onExport = { beginControlExport(ExportListKind.JOYSTICK, setOf(it)) },
                 offModifier = Modifier
                     .focusRequester(joystickProfileFocusRequesters[0])
                     .focusProperties {
@@ -628,6 +707,8 @@ fun DashboardScreen(
                 profiles = state.buttonLayoutProfiles.profiles,
                 onProfileSelected = { editingButtonLayoutProfileId = it },
                 onDeleteProfile = vm::deleteButtonLayoutProfile,
+                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
+                onExport = { beginControlExport(ExportListKind.BUTTON_LAYOUT, setOf(it)) },
                 profileModifier = { index ->
                     Modifier
                         .focusRequester(buttonLayoutProfileFocusRequesters[index])
@@ -686,6 +767,8 @@ fun DashboardScreen(
             PresetManagementSection(
                 presets = presetItems,
                 onPresetClick = { editingPresetId = it },
+                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
+                onExport = { beginControlExport(ExportListKind.PRESET, setOf(it)) },
                 itemModifier = { index ->
                     Modifier
                         .focusRequester(presetFocusRequesters[index])
@@ -707,20 +790,12 @@ fun DashboardScreen(
             )
         },
         presetAction = {
-            ControlTransferFabMenu(
-                addLabel = stringResource(R.string.add_preset),
-                onAdd = {
+            AddPresetButton(
+                onClick = {
                     editingPresetId = vm.addPreset(resources.getString(R.string.new_preset))
                 },
-                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
-                onExport = { exportListKind = ExportListKind.PRESET },
-                collapsedUpFocusRequester = presetFocusRequesters.last(),
                 modifier = Modifier
-                    .focusRequester(addPresetFocusRequester)
-                    .focusProperties {
-                        left = FocusRequester.Default
-                        right = FocusRequester.Default
-                    },
+                    .focusRequester(addPresetFocusRequester),
             )
         },
         performanceContent = {
@@ -728,6 +803,8 @@ fun DashboardScreen(
                 config = state.performanceProfiles,
                 onProfileSelected = { editingPerformanceProfileId = it },
                 onDeleteProfile = vm::deletePerformanceProfile,
+                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
+                onExport = { beginControlExport(ExportListKind.PERFORMANCE, setOf(it)) },
                 profileModifier = { index ->
                     Modifier
                         .focusRequester(performanceProfileFocusRequesters[index])
@@ -1127,80 +1204,6 @@ fun DashboardScreen(
                     Text(stringResource(R.string.cancel))
                 }
             },
-        )
-    }
-
-    exportListKind?.let { kind ->
-        val choices = when (kind) {
-            ExportListKind.PRESET -> state.presetConfig.catalog.presets.map {
-                ExportChoice(it.id, it.name)
-            }
-            ExportListKind.FAN -> state.fanConfig.catalog.profiles.map {
-                ExportChoice(it.id, it.displayName(context))
-            }
-            ExportListKind.JOYSTICK -> state.joystickProfiles.profiles.map {
-                ExportChoice(it.id, it.name)
-            }
-            ExportListKind.BUTTON_LAYOUT -> state.buttonLayoutProfiles.profiles.map {
-                ExportChoice(it.id, it.name)
-            }
-            ExportListKind.PERFORMANCE -> state.performanceProfiles.profiles
-                .filter(PerformanceProfile::isEditable)
-                .map { ExportChoice(it.id, it.displayName(context)) }
-        }
-        ExportSelectionDialog(
-            choices = choices,
-            onExport = { selectedIds ->
-                pendingExportFiles = when (kind) {
-                    ExportListKind.PRESET -> state.presetConfig.catalog.presets
-                        .filter { it.id in selectedIds }
-                        .map { preset ->
-                            val fanCurve = state.fanConfig.catalog.profile(preset.fanCurveId)
-                                ?.let { it.displayName(context) to it }
-                            val joystick = state.joystickProfiles.profile(preset.joystickId)
-                            val buttonLayout = state.buttonLayoutProfiles
-                                .profile(preset.buttonLayoutId)
-                            val performance = state.performanceProfiles
-                                .profile(preset.performanceProfileId)
-                                ?.takeIf(PerformanceProfile::isEditable)
-                                ?.let { it.displayName(context) to it }
-                            PendingExportFile(
-                                preset.name,
-                                ControlItemJson.encodePreset(
-                                    preset = preset,
-                                    fanCurve = fanCurve,
-                                    joystick = joystick,
-                                    buttonLayout = buttonLayout,
-                                    performance = performance,
-                                ),
-                            )
-                        }
-                    ExportListKind.FAN -> state.fanConfig.catalog.profiles
-                        .filter { it.id in selectedIds }
-                        .map {
-                            val name = it.displayName(context)
-                            PendingExportFile(name, ControlItemJson.encodeFanCurve(name, it))
-                        }
-                    ExportListKind.JOYSTICK -> state.joystickProfiles.profiles
-                        .filter { it.id in selectedIds }
-                        .map { PendingExportFile(it.name, ControlItemJson.encodeJoystick(it)) }
-                    ExportListKind.BUTTON_LAYOUT -> state.buttonLayoutProfiles.profiles
-                        .filter { it.id in selectedIds }
-                        .map {
-                            PendingExportFile(it.name, ControlItemJson.encodeButtonLayout(it))
-                        }
-                    ExportListKind.PERFORMANCE -> state.performanceProfiles.profiles
-                        .filter(PerformanceProfile::isEditable)
-                        .filter { it.id in selectedIds }
-                        .map {
-                            val name = it.displayName(context)
-                            PendingExportFile(name, ControlItemJson.encodePerformance(name, it))
-                        }
-                }
-                exportListKind = null
-                exportItemsLauncher.launch(controlItemsExportDirectoryIntent())
-            },
-            onDismiss = { exportListKind = null },
         )
     }
 

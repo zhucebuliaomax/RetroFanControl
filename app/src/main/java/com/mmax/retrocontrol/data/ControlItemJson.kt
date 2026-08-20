@@ -41,6 +41,16 @@ object ControlItemJson {
             override val name: String,
             val maxFrequencies: Map<Int, Int>,
         ) : Item
+
+        data class AppProfile(
+            override val name: String,
+            val value: AppControlProfile,
+            val preset: Preset? = null,
+            val fanCurve: FanCurve? = null,
+            val joystick: Joystick? = null,
+            val buttonLayout: ButtonLayout? = null,
+            val performance: Performance? = null,
+        ) : Item
     }
 
     fun encodePreset(
@@ -92,6 +102,30 @@ object ControlItemJson {
         )
     }
 
+    fun encodeAppProfile(
+        name: String,
+        profile: AppControlProfile,
+        presetJson: String? = null,
+        fanCurveJson: String? = null,
+        joystickJson: String? = null,
+        buttonLayoutJson: String? = null,
+        performanceJson: String? = null,
+    ): String {
+        val data = JSONObject()
+            .put("packageName", profile.packageName)
+            .put("presetId", profile.presetId ?: JSONObject.NULL)
+            .put("fanCurveId", profile.fanCurveId ?: JSONObject.NULL)
+            .put("joystickId", profile.joystickId ?: JSONObject.NULL)
+            .put("buttonLayoutId", profile.buttonLayoutId ?: JSONObject.NULL)
+            .put("performanceProfileId", profile.performanceProfileId ?: JSONObject.NULL)
+        presetJson?.let { data.put("preset", JSONObject(it)) }
+        fanCurveJson?.let { data.put("fanCurve", JSONObject(it)) }
+        joystickJson?.let { data.put("joystick", JSONObject(it)) }
+        buttonLayoutJson?.let { data.put("buttonLayout", JSONObject(it)) }
+        performanceJson?.let { data.put("performance", JSONObject(it)) }
+        return root(type = "app-profile", name = name, data = data)
+    }
+
     fun decode(json: String): Item {
         val root = JSONObject(json)
         // Accept fan-curve files exported by older versions of the app.
@@ -132,6 +166,32 @@ object ControlItemJson {
             "joystick-profile" -> decodeJoystickData(data, name)
             "button-layout-profile" -> decodeButtonLayoutData(data, name)
             "performance-profile" -> decodePerformanceData(data, name)
+            "app-profile" -> Item.AppProfile(
+                name = name,
+                value = AppControlProfile(
+                    packageName = data.getString("packageName"),
+                    presetId = data.nullableString("presetId"),
+                    fanCurveId = data.nullableString("fanCurveId"),
+                    joystickId = data.nullableString("joystickId"),
+                    buttonLayoutId = data.nullableString("buttonLayoutId"),
+                    performanceProfileId = data.nullableString("performanceProfileId"),
+                ),
+                preset = data.optJSONObject("preset")?.let {
+                    decode(it.toString()) as? Item.Preset
+                },
+                fanCurve = data.optJSONObject("fanCurve")?.let {
+                    decode(it.toString()) as? Item.FanCurve
+                },
+                joystick = data.optJSONObject("joystick")?.let {
+                    decode(it.toString()) as? Item.Joystick
+                },
+                buttonLayout = data.optJSONObject("buttonLayout")?.let {
+                    decode(it.toString()) as? Item.ButtonLayout
+                },
+                performance = data.optJSONObject("performance")?.let {
+                    decode(it.toString()) as? Item.Performance
+                },
+            )
             else -> error("Unsupported control item type")
         }
     }

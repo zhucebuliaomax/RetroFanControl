@@ -229,6 +229,50 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun importControlItems(jsonFiles: List<String>): ControlImportResult {
         var imported = 0
         var failed = 0
+        fun importPreset(item: ControlItemJson.Item.Preset): String {
+            val current = mutableState.value
+            var preset = item.value
+            item.fanCurve?.let { fanCurve ->
+                val config = FanCurvePreferences.addImported(
+                    prefs, fanCurve.name, fanCurve.points, fanCurve.defaultPoints,
+                )
+                preset = preset.copy(fanCurveId = config.catalog.profiles.last().id)
+            }
+            item.joystick?.let { joystick ->
+                val catalog = JoystickProfilePreferences.addImported(prefs, joystick.value)
+                preset = preset.copy(joystickId = catalog.profiles.last().id)
+            }
+            item.buttonLayout?.let { buttonLayout ->
+                val catalog = ButtonLayoutProfilePreferences.addImported(prefs, buttonLayout.value)
+                preset = preset.copy(buttonLayoutId = catalog.profiles.last().id)
+            }
+            item.performance?.let { performance ->
+                val config = PerformanceProfilePreferences.addImported(
+                    prefs, current.performanceProfiles.policies,
+                    performance.name, performance.maxFrequencies,
+                )
+                preset = preset.copy(performanceProfileId = config.profiles.last().id)
+            }
+            val fanIds = FanCurvePreferences.load(prefs).catalog.profiles
+                .mapTo(mutableSetOf()) { it.id }
+            val joystickIds = JoystickProfilePreferences.load(prefs).profiles
+                .mapTo(mutableSetOf()) { it.id }
+            val performanceIds = PerformanceProfilePreferences.load(
+                prefs, current.performanceProfiles.policies,
+            ).profiles.mapTo(mutableSetOf()) { it.id }
+            val buttonLayoutIds = ButtonLayoutProfilePreferences.load(prefs).profiles
+                .mapTo(mutableSetOf()) { it.id }
+            val config = PresetPreferences.addImported(
+                prefs = prefs,
+                preset = preset,
+                availableFanCurveIds = fanIds,
+                availableJoystickProfileIds = joystickIds,
+                availablePerformanceProfileIds = performanceIds
+                    .takeIf { current.performanceProfiles.policies.isNotEmpty() },
+                availableButtonLayoutProfileIds = buttonLayoutIds,
+            )
+            return config.catalog.presets.last().id
+        }
         jsonFiles.forEach { json ->
             val success = runCatching {
                 when (val item = ControlItemJson.decode(json)) {
@@ -252,60 +296,62 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                         maxFrequencies = item.maxFrequencies,
                     )
                     is ControlItemJson.Item.Preset -> {
+                        importPreset(item)
+                    }
+                    is ControlItemJson.Item.AppProfile -> {
                         val current = mutableState.value
-                        var preset = item.value
-                        item.fanCurve?.let { fanCurve ->
+                        var importedProfile = item.value
+                        item.preset?.let {
+                            importedProfile = importedProfile.copy(presetId = importPreset(it))
+                        }
+                        item.fanCurve?.let {
                             val config = FanCurvePreferences.addImported(
-                                prefs = prefs,
-                                name = fanCurve.name,
-                                points = fanCurve.points,
-                                defaultPoints = fanCurve.defaultPoints,
+                                prefs, it.name, it.points, it.defaultPoints,
                             )
-                            preset = preset.copy(fanCurveId = config.catalog.profiles.last().id)
-                        }
-                        item.joystick?.let { joystick ->
-                            val catalog = JoystickProfilePreferences.addImported(
-                                prefs = prefs,
-                                profile = joystick.value,
+                            importedProfile = importedProfile.copy(
+                                fanCurveId = config.catalog.profiles.last().id,
                             )
-                            preset = preset.copy(joystickId = catalog.profiles.last().id)
                         }
-                        item.buttonLayout?.let { buttonLayout ->
-                            val catalog = ButtonLayoutProfilePreferences.addImported(
-                                prefs,
-                                buttonLayout.value,
+                        item.joystick?.let {
+                            val catalog = JoystickProfilePreferences.addImported(prefs, it.value)
+                            importedProfile = importedProfile.copy(
+                                joystickId = catalog.profiles.last().id,
                             )
-                            preset = preset.copy(buttonLayoutId = catalog.profiles.last().id)
                         }
-                        item.performance?.let { performance ->
+                        item.buttonLayout?.let {
+                            val catalog = ButtonLayoutProfilePreferences.addImported(prefs, it.value)
+                            importedProfile = importedProfile.copy(
+                                buttonLayoutId = catalog.profiles.last().id,
+                            )
+                        }
+                        item.performance?.let {
                             val config = PerformanceProfilePreferences.addImported(
-                                prefs = prefs,
-                                policies = current.performanceProfiles.policies,
-                                name = performance.name,
-                                maxFrequencies = performance.maxFrequencies,
+                                prefs, current.performanceProfiles.policies,
+                                it.name, it.maxFrequencies,
                             )
-                            preset = preset.copy(
+                            importedProfile = importedProfile.copy(
                                 performanceProfileId = config.profiles.last().id,
                             )
                         }
-                        val fanIds = FanCurvePreferences.load(prefs).catalog.profiles
-                            .mapTo(mutableSetOf()) { it.id }
-                        val joystickIds = JoystickProfilePreferences.load(prefs).profiles
-                            .mapTo(mutableSetOf()) { it.id }
-                        val performanceIds = PerformanceProfilePreferences.load(
-                            prefs,
-                            current.performanceProfiles.policies,
-                        ).profiles.mapTo(mutableSetOf()) { it.id }
-                        val buttonLayoutIds = ButtonLayoutProfilePreferences.load(prefs).profiles
-                            .mapTo(mutableSetOf()) { it.id }
-                        PresetPreferences.addImported(
+                        AppProfilePreferences.setImported(
                             prefs = prefs,
-                            preset = preset,
-                            availableFanCurveIds = fanIds,
-                            availableJoystickProfileIds = joystickIds,
-                            availablePerformanceProfileIds = performanceIds
-                                .takeIf { current.performanceProfiles.policies.isNotEmpty() },
-                            availableButtonLayoutProfileIds = buttonLayoutIds,
+                            profile = importedProfile,
+                            availablePresetIds = PresetPreferences.load(
+                                prefs,
+                                FanCurvePreferences.load(prefs).catalog.profiles
+                                    .mapTo(mutableSetOf()) { it.id },
+                                JoystickProfilePreferences.load(prefs).profiles
+                                    .mapTo(mutableSetOf()) { it.id },
+                            ).catalog.presets.mapTo(mutableSetOf()) { it.id },
+                            availableFanCurveIds = FanCurvePreferences.load(prefs).catalog.profiles
+                                .mapTo(mutableSetOf()) { it.id },
+                            availableJoystickProfileIds = JoystickProfilePreferences.load(prefs)
+                                .profiles.mapTo(mutableSetOf()) { it.id },
+                            availablePerformanceProfileIds = PerformanceProfilePreferences.load(
+                                prefs, current.performanceProfiles.policies,
+                            ).profiles.mapTo(mutableSetOf()) { it.id },
+                            availableButtonLayoutProfileIds = ButtonLayoutProfilePreferences
+                                .load(prefs).profiles.mapTo(mutableSetOf()) { it.id },
                         )
                     }
                 }

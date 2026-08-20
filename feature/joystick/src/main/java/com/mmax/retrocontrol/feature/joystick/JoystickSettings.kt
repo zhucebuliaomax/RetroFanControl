@@ -76,6 +76,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.mmax.retrocontrol.designsystem.SecondaryMenuList
 import com.mmax.retrocontrol.designsystem.SecondaryMenuListItem
+import com.mmax.retrocontrol.designsystem.TransferContextMenuContainer
 import com.mmax.retrocontrol.designsystem.SettingsListDialog
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 import kotlin.math.roundToInt
@@ -115,6 +116,10 @@ fun JoystickProfilesSection(
     profiles: List<JoystickProfileUiState>,
     onProfileSelected: (String) -> Unit,
     onDeleteProfile: (String) -> Unit,
+    importLabel: String,
+    exportLabel: String,
+    onImport: () -> Unit,
+    onExport: (String) -> Unit,
     modifier: Modifier = Modifier,
     offModifier: Modifier = Modifier,
     profileModifier: (Int) -> Modifier = { Modifier },
@@ -131,23 +136,31 @@ fun JoystickProfilesSection(
         )
         profiles.forEachIndexed { index, profile ->
             key(profile.id) {
-                SecondaryMenuListItem(
-                    index = index + 1,
-                    count = count,
-                    onClick = { onProfileSelected(profile.id) },
-                    trailingContent = {
-                        Icon(Icons.Default.ChevronRight, contentDescription = null)
-                    },
-                    modifier = profileModifier(index),
-                    supportingContent = { Text(stringResource(profile.mode.labelRes)) },
-                    content = {
-                        Text(
-                            text = profile.name,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                )
+                TransferContextMenuContainer(
+                    importLabel = importLabel,
+                    exportLabel = exportLabel,
+                    onImport = onImport,
+                    onExport = { onExport(profile.id) },
+                ) { onLongClick ->
+                    SecondaryMenuListItem(
+                        index = index + 1,
+                        count = count,
+                        onClick = { onProfileSelected(profile.id) },
+                        onLongClick = onLongClick,
+                        trailingContent = {
+                            Icon(Icons.Default.ChevronRight, contentDescription = null)
+                        },
+                        modifier = profileModifier(index),
+                        supportingContent = { Text(stringResource(profile.mode.labelRes)) },
+                        content = {
+                            Text(
+                                text = profile.name,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                    )
+                }
             }
         }
     }
