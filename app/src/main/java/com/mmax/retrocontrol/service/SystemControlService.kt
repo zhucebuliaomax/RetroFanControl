@@ -48,6 +48,8 @@ import com.mmax.retrocontrol.data.JoystickSelectionPreferences
 import com.mmax.retrocontrol.data.displayName
 import com.mmax.retrocontrol.hardware.FanController
 import com.mmax.retrocontrol.hardware.FanResponseController
+import com.mmax.retrocontrol.hardware.ActiveFanSource
+import com.mmax.retrocontrol.hardware.FanRuntimePolicy
 import com.mmax.retrocontrol.hardware.CpuFrequencyController
 import com.mmax.retrocontrol.hardware.JoystickEffectEngine
 import com.mmax.retrocontrol.data.AmbilightPreferences
@@ -66,7 +68,6 @@ import com.mmax.retrocontrol.tile.ButtonLayoutQuickSettingsTile
 import com.mmax.retrocontrol.tile.ChargingQuickSettingsTile
 import com.mmax.retrocontrol.hardware.BatteryConnectionReader
 import com.mmax.retrocontrol.hardware.BatteryConnectionState
-import com.mmax.retrocontrol.util.formatTemperature
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -168,9 +169,19 @@ class SystemControlService : Service() {
     private val overlayAdjustmentMutex = Mutex()
     private var overlay: TelemetryOverlay? = null
     private lateinit var joystickEffects: JoystickEffectEngine
-    private var lastNotificationUpdateMs = 0L
+    @Volatile
+    private var foregroundNotificationStarted = false
+    @Volatile
+    private var lastPublishedNotificationSignature: String? = null
+    @Volatile
+    private var fanControlFaultCode: String? = null
+    @Volatile
+    private var fanControlReady = false
+    @Volatile
+    private var overlayVisible = false
     private var screenReceiverRegistered = false
     private var chargingReceiverRegistered = false
+    @Volatile
     private var lastChargingPowerConnected = false
 
     @Volatile
@@ -198,7 +209,10 @@ class SystemControlService : Service() {
     private var previewFanProfileId: String? = null
 
     @Volatile
-    private var configRevision = 0L
+    private var applicationFanRevision = 0L
+
+    @Volatile
+    private var usbFanRevision = 0L
 
     @Volatile
     private var overlayEnabled = false
@@ -242,7 +256,9 @@ class SystemControlService : Service() {
                 isConnected = battery.powerConnected,
                 preserveEnabled = ChargingControlPreferences.isPreserveEnabled(prefs),
             )
+            val powerChanged = lastChargingPowerConnected != battery.powerConnected
             lastChargingPowerConnected = battery.powerConnected
+            if (powerChanged) usbFanRevision++
             when (action) {
                 ChargingConnectionAction.NONE -> Unit
                 ChargingConnectionAction.RESET_TO_NORMAL -> {
@@ -474,12 +490,13 @@ class SystemControlService : Service() {
             ?.takeIf { resolved.catalog.profile(it) != null }
             ?.let { resolved.copy(activeProfileId = it) }
             ?: resolved
-        configRevision++
+        applicationFanRevision++
+        requestControlNotificationUpdate()
     }
 
     private fun loadUsbThermalPreferences() {
         usbThermalControl = UsbThermalFanCurvePreferences.load(prefs)
-        configRevision++
+        usbFanRevision++
     }
 
     private fun loadJoystickPreferences(force: Boolean = false) {
@@ -495,6 +512,7 @@ class SystemControlService : Service() {
                 foregroundIsGame = AppProfilePreferences.isGame(this, foregroundPackageName),
             )
         joystickEffects.apply(joystickProfile, force = force)
+        requestControlNotificationUpdate()
     }
 
     private fun loadOverlayPreference() {
@@ -517,11 +535,21 @@ class SystemControlService : Service() {
             Prefs.THERMAL_PROTECTION_DISABLED,
             BundledDefaultConfig.settingBoolean("thermalProtectionDisabled"),
         )
+        fanControlReady = false
         scope.launch {
-            KernelFanThermalController.apply(
+            when (val result = KernelFanThermalController.apply(
                 prefs = prefs,
                 disableThermalProtection = protectionDisabled,
-            )
+            )) {
+                KernelFanThermalController.ApplyResult.Success -> {
+                    fanControlReady = true
+                    applicationFanRevision++
+                    clearFanControlFault()
+                }
+                is KernelFanThermalController.ApplyResult.Fault -> {
+                    reportFanControlFault(result.code)
+                }
+            }
         }
     }
 
@@ -539,6 +567,7 @@ class SystemControlService : Service() {
             if (target == null) {
                 buttonLayoutRequestInitialized = true
                 lastRequestedButtonLayoutProfile = null
+                requestControlNotificationUpdate()
                 return@launch
             }
             if (
@@ -551,6 +580,7 @@ class SystemControlService : Service() {
                 .onSuccess { state ->
                     buttonLayoutRequestInitialized = true
                     lastRequestedButtonLayoutProfile = target
+                    requestControlNotificationUpdate()
                     Log.i(TAG, "Applied button layout profile ${target.id}: $state")
                 }
                 .onFailure { error ->
@@ -567,6 +597,7 @@ class SystemControlService : Service() {
             frequencyPolicies = policies
             if (policies.isEmpty()) {
                 activePerformanceProfile = null
+                requestControlNotificationUpdate()
                 Log.w(TAG, "CPU frequency policies are unavailable")
                 return@launch
             }
@@ -608,6 +639,7 @@ class SystemControlService : Service() {
                     performanceRequestInitialized = true
                     lastRequestedPerformanceProfileId = null
                     activePerformanceProfile = null
+                    requestControlNotificationUpdate()
                     return@launch
                 }
                 profileConfig.stockProfile
@@ -620,6 +652,7 @@ class SystemControlService : Service() {
                 targetId == lastRequestedPerformanceProfileId
             ) {
                 activePerformanceProfile = target
+                requestControlNotificationUpdate()
                 return@launch
             }
 
@@ -632,6 +665,7 @@ class SystemControlService : Service() {
                     performanceRequestInitialized = true
                     lastRequestedPerformanceProfileId = targetId
                     activePerformanceProfile = target
+                    requestControlNotificationUpdate()
                     prefs.edit {
                         if (targetId == null) {
                             remove(Prefs.LAST_APPLIED_PERFORMANCE_PROFILE)
@@ -694,7 +728,8 @@ class SystemControlService : Service() {
             ?.takeIf { resolved.catalog.profile(it) != null }
             ?.let { resolved.copy(activeProfileId = it) }
             ?: resolved
-        configRevision++
+        applicationFanRevision++
+        requestControlNotificationUpdate()
         FanQuickSettingsTile.requestRefresh(applicationContext)
     }
 
@@ -758,26 +793,31 @@ class SystemControlService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, buildNotification())
         }
+        foregroundNotificationStarted = true
+        lastPublishedNotificationSignature = notificationSignature()
     }
 
     private fun startFanLoop() {
         fanJob?.cancel()
         fanJob = scope.launch {
             val response = FanResponseController()
-            val usbResponse = FanResponseController()
             var appliedRevision = Long.MIN_VALUE
+            var activeSource = ActiveFanSource.NONE
             var thermal = ThermalSnapshot()
-            var lastThermalReadMs = 0L
+            var lastFanSampleMs = 0L
+            var lastFanResponseMs = 0L
+            var belowApplicationStart = false
+            var fanPercent = 0
             var currentFrequencies = emptyMap<Int, Int>()
+            var lastFrequencyReadMs = 0L
 
             while (isActive) {
                 val now = android.os.SystemClock.elapsedRealtime()
-                if (now - lastThermalReadMs >= 500L) {
-                    thermal = ThermalSensorReader.read()
+                if (now - lastFrequencyReadMs >= 500L) {
                     currentFrequencies = CpuFrequencyController.readCurrentFrequencies(
                         frequencyPolicies.flatMap { it.cpuIds }
                     )
-                    lastThermalReadMs = now
+                    lastFrequencyReadMs = now
                 }
 
                 val performanceProfile = activePerformanceProfile
@@ -791,64 +831,104 @@ class SystemControlService : Service() {
                         .orEmpty(),
                 )
 
-                val config = fanConfig
-                val profile = config.activeProfile
-                val revision = configRevision
-                val configChanged = revision != appliedRevision
-                val controlTemp = thermal.controlTempC
-
-                val appOutput = when {
-                    fanSuspendedForScreenOff || profile == null -> {
-                        if (configChanged) {
-                            response.resetImmediate(controlTemp, 0.0, now)
-                        }
-                        0.0
-                    }
-                    controlTemp <= 0.0 -> 0.0
-                    configChanged -> {
-                        val immediate = curvePercent(profile.points, controlTemp)
-                        response.resetImmediate(controlTemp, immediate, now)
-                    }
-                    else -> response.update(controlTemp, now) { temp ->
-                        curvePercent(profile.points, temp)
-                    }
+                if (!fanControlReady) {
+                    delay(300L)
+                    continue
                 }
 
+                val profile = fanConfig.activeProfile
                 val usbControl = usbThermalControl
-                val usbTemp = thermal.usb?.tempC ?: 0.0
-                val usbOutput = when {
-                    !usbControl.enabled || usbTemp <= 0.0 -> {
-                        if (configChanged) usbResponse.resetImmediate(usbTemp, 0.0, now)
-                        0.0
+                val selectedSource = FanRuntimePolicy.selectSource(
+                    applicationCurveEnabled = profile != null,
+                    applicationSuspendedForScreenOff = fanSuspendedForScreenOff,
+                    usbCurveEnabled = usbControl.enabled,
+                    externalPowerConnected = lastChargingPowerConnected,
+                )
+                val revision = when (selectedSource) {
+                    ActiveFanSource.APPLICATION -> applicationFanRevision
+                    ActiveFanSource.USB -> usbFanRevision
+                    ActiveFanSource.NONE -> 0L
+                }
+                val sourceChanged = selectedSource != activeSource
+                val configChanged = revision != appliedRevision
+                val sampleInterval = FanRuntimePolicy.sampleIntervalMs(
+                    source = selectedSource,
+                    overlayVisible = overlayVisible,
+                    belowApplicationStart = belowApplicationStart,
+                )
+                val sampleDue = sourceChanged || configChanged ||
+                    now - lastFanSampleMs >= sampleInterval
+                var outputToApply: Double? = null
+
+                if (selectedSource == ActiveFanSource.NONE) {
+                    if (sourceChanged || configChanged) {
+                        thermal = ThermalSnapshot()
+                        belowApplicationStart = false
+                        outputToApply = 0.0
                     }
-                    configChanged -> {
-                        val immediate = curvePercent(usbControl.profile.points, usbTemp)
-                        usbResponse.resetImmediate(usbTemp, immediate, now)
+                } else if (sampleDue) {
+                    thermal = when (selectedSource) {
+                        ActiveFanSource.APPLICATION -> ThermalSensorReader.read()
+                        ActiveFanSource.USB -> ThermalSensorReader.readUsb()
+                        ActiveFanSource.NONE -> ThermalSnapshot()
                     }
-                    else -> usbResponse.update(usbTemp, now) { temp ->
-                        curvePercent(usbControl.profile.points, temp)
+                    val controlTemp = when (selectedSource) {
+                        ActiveFanSource.APPLICATION -> thermal.controlTempC
+                        ActiveFanSource.USB -> thermal.usb?.tempC ?: 0.0
+                        ActiveFanSource.NONE -> 0.0
+                    }
+                    val points = when (selectedSource) {
+                        ActiveFanSource.APPLICATION -> profile?.points.orEmpty()
+                        ActiveFanSource.USB -> usbControl.profile.points
+                        ActiveFanSource.NONE -> emptyList()
+                    }
+                    outputToApply = if (controlTemp <= 0.0) {
+                        response.resetImmediate(controlTemp, 0.0, now)
+                    } else if (sourceChanged || configChanged) {
+                        response.resetImmediate(
+                            controlTemp,
+                            curvePercent(points, controlTemp),
+                            now,
+                        )
+                    } else {
+                        response.update(controlTemp, now) { temp -> curvePercent(points, temp) }
+                    }
+                    belowApplicationStart = selectedSource == ActiveFanSource.APPLICATION &&
+                        FanRuntimePolicy.isSafelyBelowStart(
+                            controlTemp,
+                            points.minByOrNull { it.tempC }?.tempC,
+                        )
+                    lastFanSampleMs = now
+                    lastFanResponseMs = now
+                } else if (
+                    response.isRamping(now) &&
+                    now - lastFanResponseMs >= FanRuntimePolicy.responseIntervalMs(overlayVisible)
+                ) {
+                    outputToApply = response.currentLevel(now)
+                    lastFanResponseMs = now
+                }
+
+                if (outputToApply != null) {
+                    when (val write = FanController.writePercent(outputToApply)) {
+                        is FanController.WriteResult.Success -> {
+                            fanPercent = write.percent
+                            clearFanControlFault()
+                        }
+                        is FanController.WriteResult.Fault -> reportFanControlFault(write.code)
                     }
                 }
-                val output = maxOf(appOutput, usbOutput)
 
                 val profileName = profile?.displayName(this@SystemControlService).orEmpty()
                 val profilePoints = profile?.points.orEmpty()
-                val percent = FanController.writePercent(output)
                 TelemetryRepository.updateThermal(
                     thermal = thermal,
-                    fanPercent = percent,
-                    fanAdjustEnabled = profile != null &&
-                        !fanSuspendedForScreenOff &&
-                        controlTemp > 0.0,
+                    fanPercent = fanPercent,
+                    fanAdjustEnabled = selectedSource == ActiveFanSource.APPLICATION &&
+                        thermal.controlTempC > 0.0,
                     activeCurveName = profileName,
                     activeCurvePoints = profilePoints,
                 )
-
-                if (now - lastNotificationUpdateMs >= 2_000L) {
-                    updateNotification()
-                    lastNotificationUpdateMs = now
-                }
-
+                activeSource = selectedSource
                 appliedRevision = revision
                 delay(300L)
             }
@@ -872,9 +952,11 @@ class SystemControlService : Service() {
                 )
             }
             overlay?.show()
+            overlayVisible = true
         } else {
             overlay?.hide()
             overlay = null
+            overlayVisible = false
         }
     }
 
@@ -905,7 +987,8 @@ class SystemControlService : Service() {
                         deltaPercent = deltaPercent,
                     )
                     fanConfig = updated.copy(activeProfileId = targetId)
-                    configRevision++
+                    applicationFanRevision++
+                    requestControlNotificationUpdate()
                 }.onFailure { error ->
                     Log.e(TAG, "Unable to adjust the overlay fan curve", error)
                 }
@@ -1026,7 +1109,6 @@ class SystemControlService : Service() {
             delay(5_000L)
             if (!fanSuspendedForScreenOff) {
                 fanSuspendedForScreenOff = true
-                configRevision++
             }
         }
     }
@@ -1036,7 +1118,6 @@ class SystemControlService : Service() {
         screenOffJob = null
         if (fanSuspendedForScreenOff) {
             fanSuspendedForScreenOff = false
-            configRevision++
         }
     }
 
@@ -1123,32 +1204,35 @@ class SystemControlService : Service() {
     }
 
     private fun buildNotification(): Notification {
-        val telemetry = TelemetryRepository.state.value
-        val profile = fanConfig.activeProfile
-        val cpu = telemetry.thermal.cpuSummary
-        val gpu = telemetry.thermal.gpuSummary
-        val cpuText = if (cpu.count > 0) formatTemperature(cpu.averageC)
-            else getString(R.string.not_available)
-        val gpuText = if (gpu.count > 0) formatTemperature(gpu.averageC)
-            else getString(R.string.not_available)
         val openApp = PendingIntent.getActivity(
             this,
             0,
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+        val faultCode = fanControlFaultCode
+        val title: String
+        val content: String
+        if (faultCode != null) {
+            title = getString(R.string.fan_control_fault_title)
+            content = faultCode
+        } else {
+            title = getString(R.string.app_name)
+            content = getString(
+                R.string.notification_control_summary,
+                fanConfig.activeProfile?.displayName(this) ?: getString(R.string.fan_mode_off),
+                joystickProfile?.name ?: getString(R.string.profile_control_off),
+                lastRequestedButtonLayoutProfile?.name
+                    ?: getString(R.string.button_layout_unmanaged),
+                activePerformanceProfile?.displayName(this)
+                    ?: getString(R.string.performance_unmanaged),
+            )
+        }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_tile_fan)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(
-                getString(
-                    R.string.notification_content,
-                    profile?.displayName(this) ?: getString(R.string.fan_mode_off),
-                    telemetry.fanPercent,
-                    cpuText,
-                    gpuText,
-                )
-            )
+            .setContentTitle(title)
+            .setContentText(content)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
             .setContentIntent(openApp)
             .setOngoing(true)
             .setSilent(true)
@@ -1160,5 +1244,38 @@ class SystemControlService : Service() {
     private fun updateNotification() {
         getSystemService(NotificationManager::class.java)
             .notify(NOTIFICATION_ID, buildNotification())
+    }
+
+    private fun requestControlNotificationUpdate() {
+        if (!foregroundNotificationStarted) return
+        val signature = notificationSignature()
+        if (signature == lastPublishedNotificationSignature) return
+        updateNotification()
+        lastPublishedNotificationSignature = signature
+    }
+
+    private fun notificationSignature(): String = buildString {
+        append(fanControlFaultCode.orEmpty())
+        append('\u0000')
+        append(fanConfig.activeProfile?.displayName(this@SystemControlService).orEmpty())
+        append('\u0000')
+        append(joystickProfile?.name.orEmpty())
+        append('\u0000')
+        append(lastRequestedButtonLayoutProfile?.name.orEmpty())
+        append('\u0000')
+        append(activePerformanceProfile?.displayName(this@SystemControlService).orEmpty())
+    }
+
+    private fun reportFanControlFault(code: String) {
+        if (fanControlFaultCode == code) return
+        fanControlFaultCode = code
+        Log.e(TAG, "Fan control fault: $code")
+        requestControlNotificationUpdate()
+    }
+
+    private fun clearFanControlFault() {
+        if (fanControlFaultCode == null) return
+        fanControlFaultCode = null
+        requestControlNotificationUpdate()
     }
 }

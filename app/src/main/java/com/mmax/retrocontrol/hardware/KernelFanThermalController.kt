@@ -11,6 +11,18 @@ object KernelFanThermalController {
     private const val THERMAL_BASE = "/sys/class/thermal"
     private const val DISABLED_TRIP_TEMP_MILLIDEGREES = 125_000
 
+    sealed interface ApplyResult {
+        data object Success : ApplyResult
+        data class Fault(val code: String) : ApplyResult
+    }
+
+    private const val ERROR_NO_TRIPS = "FC-E01"
+    private const val ERROR_BACKUP = "FC-E02"
+    private const val ERROR_DISABLE_ZONE = "FC-E03"
+    private const val ERROR_WRITE_TRIP = "FC-E04"
+    private const val ERROR_RESTORE_MODE = "FC-E05"
+    private const val ERROR_VERIFY = "FC-E06"
+
     private data class FanTrip(
         val zonePath: String,
         val zoneType: String,
@@ -35,11 +47,11 @@ object KernelFanThermalController {
     fun apply(
         prefs: SharedPreferences,
         disableThermalProtection: Boolean,
-    ): Boolean {
+    ): ApplyResult {
         val trips = discoverFanTrips()
         if (trips.isEmpty()) {
             Log.w(TAG, "No CPU/GPU/USB pwm-fan thermal trips found")
-            return false
+            return ApplyResult.Fault(ERROR_NO_TRIPS)
         }
 
         val originalEditor = prefs.edit()
@@ -50,7 +62,10 @@ object KernelFanThermalController {
                 originalEditor.putInt(trip.preferenceKey, trip.currentTemp)
             }
         }
-        originalEditor.commit()
+        if (!originalEditor.commit()) {
+            Log.w(TAG, "Unable to persist original pwm-fan trip temperatures")
+            return ApplyResult.Fault(ERROR_BACKUP)
+        }
 
         val zones = trips.groupBy { it.zonePath }
         val targetModes = zones.mapValues { (_, zoneTrips) ->
@@ -66,10 +81,10 @@ object KernelFanThermalController {
             }
         }
 
-        var success = true
+        var firstError: String? = null
         zones.forEach { (zonePath, zoneTrips) ->
             if (!setZoneMode(zonePath, zoneTrips.first().zoneType, "disabled")) {
-                success = false
+                if (firstError == null) firstError = ERROR_DISABLE_ZONE
             }
         }
         trips.forEach { trip ->
@@ -81,7 +96,7 @@ object KernelFanThermalController {
             val original = prefs.getInt(trip.preferenceKey, trip.currentTemp)
             val target = if (disabled) DISABLED_TRIP_TEMP_MILLIDEGREES else original
             if (!Shell.cmd("echo $target > ${trip.tempPath} 2>/dev/null").exec().isSuccess) {
-                success = false
+                if (firstError == null) firstError = ERROR_WRITE_TRIP
                 Log.w(TAG, "Unable to write ${trip.zoneType} fan trip ${trip.tripIndex}")
             }
         }
@@ -92,19 +107,22 @@ object KernelFanThermalController {
                     targetModes.getValue(zonePath),
                 )
             ) {
-                success = false
+                if (firstError == null) firstError = ERROR_RESTORE_MODE
             }
         }
-        if (!FanController.writeState(0)) {
-            success = false
-            Log.w(TAG, "Unable to clear pwm-fan state after thermal policy transition")
+
+        if (!verify(trips, targetModes)) {
+            if (firstError == null) firstError = ERROR_VERIFY
         }
+
+        firstError?.let { return ApplyResult.Fault(it) }
+        FanController.invalidateLastAppliedOutput()
         Log.i(
             TAG,
             "Applied thermal policy: CPU/GPU/USB fan disabled, " +
                 "protection disabled=$disableThermalProtection",
         )
-        return success
+        return ApplyResult.Success
     }
 
     private fun setZoneMode(zonePath: String, zoneType: String, mode: String): Boolean {
@@ -142,5 +160,23 @@ object KernelFanThermalController {
                 currentTemp = fields[3].toIntOrNull() ?: return@mapNotNull null,
             )
         }.distinctBy { Triple(it.zonePath, it.zoneType, it.tripIndex) }
+    }
+
+    private fun verify(
+        trips: List<FanTrip>,
+        targetModes: Map<String, String>,
+    ): Boolean {
+        val tripsMatch = trips.all { trip ->
+            Shell.cmd("cat ${trip.tempPath} 2>/dev/null").exec().out
+                .lastOrNull()?.trim()?.toIntOrNull() == DISABLED_TRIP_TEMP_MILLIDEGREES
+        }
+        val modesMatch = targetModes.all { (zonePath, expected) ->
+            Shell.cmd("cat $zonePath/mode 2>/dev/null").exec().out
+                .lastOrNull()?.trim() == expected
+        }
+        if (!tripsMatch || !modesMatch) {
+            Log.w(TAG, "pwm-fan ownership readback verification failed")
+        }
+        return tripsMatch && modesMatch
     }
 }

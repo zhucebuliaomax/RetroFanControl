@@ -61,4 +61,7 @@ class FanResponseController(
         val progress = ((nowMs - rampStartMs).toDouble() / rampDurationMs).coerceIn(0.0, 1.0)
         return rampStartPercent + (rampTargetPercent - rampStartPercent) * progress
     }
+
+    fun isRamping(nowMs: Long): Boolean =
+        rampStartPercent != rampTargetPercent && nowMs - rampStartMs < rampDurationMs
 }

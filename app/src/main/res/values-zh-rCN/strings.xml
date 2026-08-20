@@ -58,8 +58,9 @@
     <string name="radio_selection_hint">点击单选按钮进行选择，点击项目进行编辑。</string>
 
     <string name="notification_channel_name">风扇控制</string>
-    <string name="notification_channel_description">显示当前曲线、风扇百分比和 CPU/GPU 温度</string>
-    <string name="notification_content">%1$s · %2$d%% · CPU %3$s · GPU %4$s</string>
+    <string name="notification_channel_description">显示当前采用的四个控制方案及风扇控制故障</string>
+    <string name="notification_control_summary">风扇：%1$s · 摇杆：%2$s · 按键：%3$s · 频率：%4$s</string>
+    <string name="fan_control_fault_title">风扇控制故障</string>
     <string name="profile_switch_toast_message">切换至%1$s profile</string>
     <string name="profile_control_off">关闭</string>
 

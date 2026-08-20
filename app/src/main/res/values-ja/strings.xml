@@ -60,8 +60,9 @@
     <string name="delete_performance_profile_confirmation">「%1$s」を削除しますか？この操作は元に戻せません。</string>
 
     <string name="notification_channel_name">ファン制御</string>
-    <string name="notification_channel_description">現在のカーブ、ファン割合、CPU/GPU 温度を表示します</string>
-    <string name="notification_content">%1$s · %2$d%% · CPU %3$s · GPU %4$s</string>
+    <string name="notification_channel_description">現在の4つの制御設定とファン制御エラーを表示します</string>
+    <string name="notification_control_summary">ファン：%1$s · スティック：%2$s · ボタン：%3$s · 周波数：%4$s</string>
+    <string name="fan_control_fault_title">ファン制御エラー</string>
     <string name="profile_switch_toast_message">%1$s プロファイルに切り替えました</string>
     <string name="profile_control_off">オフ</string>
 

@@ -17,6 +17,33 @@ object FanController {
     private var cachedMaxState: Int? = null
     @Volatile
     private var cachedPwmPath: String? = null
+
+    private data class AppliedPhysicalOutput(val path: String, val value: Int)
+
+    sealed interface WriteResult {
+        data class Success(val percent: Int, val changed: Boolean) : WriteResult
+        data class Fault(val code: String) : WriteResult
+    }
+
+    private const val ERROR_OUTPUT_UNAVAILABLE = "FC-E10"
+    private const val ERROR_OUTPUT_WRITE = "FC-E11"
+    private const val ERROR_OUTPUT_VERIFY = "FC-E12"
+
+    @Volatile
+    private var lastAppliedOutput: AppliedPhysicalOutput? = null
+
+    @Synchronized
+    fun invalidateLastAppliedOutput() {
+        lastAppliedOutput = null
+    }
+
+    @Synchronized
+    fun invalidateDiscovery() {
+        cachedPath = null
+        cachedMaxState = null
+        cachedPwmPath = null
+        lastAppliedOutput = null
+    }
     fun discoverPwmPath(): String? {
         cachedPwmPath?.let { return it }
         val script = buildString {
@@ -71,11 +98,7 @@ object FanController {
             ?.trim()?.toIntOrNull() ?: 0
     }
 
-    /**
-     * Rewrites the requested state every control tick. The kernel step_wise
-     * governor may replace cur_state in roughly one second, so suppressing
-     * identical writes would make manual fan control unreliable.
-     */
+    /** Direct cooling-state write retained for diagnostics and compatibility. */
     fun writeState(value: Int): Boolean {
         val path = discoverFanPath() ?: return false
         val maxState = readMaxState().coerceAtLeast(1)
@@ -83,21 +106,52 @@ object FanController {
         return Shell.cmd("echo $clamped > $path/cur_state 2>/dev/null").exec().isSuccess
     }
 
-    /** Applies the application-owned fan output, falling back to one cooling state if needed. */
-    fun writePercent(value: Double): Int {
+    /** Writes and verifies only changed physical output, with cooling-state fallback. */
+    @Synchronized
+    fun writePercent(value: Double): WriteResult {
         val percent = value.roundToInt().coerceIn(0, 100)
         val pwmPath = discoverPwmPath()
         if (pwmPath != null) {
             val pwm = (percent / 100.0 * PWM_MAX).roundToInt()
-            if (Shell.cmd("echo $pwm > $pwmPath 2>/dev/null").exec().isSuccess) {
-                return percent
+            when (val result = writeVerified(pwmPath, pwm)) {
+                PhysicalWriteResult.SUCCESS -> return WriteResult.Success(percent, changed = true)
+                PhysicalWriteResult.UNCHANGED -> return WriteResult.Success(percent, changed = false)
+                PhysicalWriteResult.VERIFY_FAILED -> {
+                    Log.w(TAG, "PWM readback mismatch at $pwmPath")
+                }
+                PhysicalWriteResult.WRITE_FAILED -> {
+                    Log.w(TAG, "Unable to write PWM at $pwmPath")
+                }
             }
+            cachedPwmPath = null
         }
 
+        val fanPath = discoverFanPath() ?: return WriteResult.Fault(ERROR_OUTPUT_UNAVAILABLE)
         val maxState = readMaxState().coerceAtLeast(1)
         val state = (percent / 100.0 * maxState).roundToInt()
-        writeState(state)
-        return percent
+        return when (writeVerified("$fanPath/cur_state", state)) {
+            PhysicalWriteResult.SUCCESS -> WriteResult.Success(percent, changed = true)
+            PhysicalWriteResult.UNCHANGED -> WriteResult.Success(percent, changed = false)
+            PhysicalWriteResult.VERIFY_FAILED -> WriteResult.Fault(ERROR_OUTPUT_VERIFY)
+            PhysicalWriteResult.WRITE_FAILED -> WriteResult.Fault(ERROR_OUTPUT_WRITE)
+        }
+    }
+
+    private enum class PhysicalWriteResult { SUCCESS, UNCHANGED, WRITE_FAILED, VERIFY_FAILED }
+
+    private fun writeVerified(path: String, value: Int): PhysicalWriteResult {
+        if (lastAppliedOutput == AppliedPhysicalOutput(path, value)) {
+            return PhysicalWriteResult.UNCHANGED
+        }
+        val result = Shell.cmd(
+            "echo $value > $path 2>/dev/null && cat $path 2>/dev/null"
+        ).exec()
+        if (!result.isSuccess) return PhysicalWriteResult.WRITE_FAILED
+        val actual = result.out.lastOrNull()?.trim()?.toIntOrNull()
+            ?: return PhysicalWriteResult.VERIFY_FAILED
+        if (actual != value) return PhysicalWriteResult.VERIFY_FAILED
+        lastAppliedOutput = AppliedPhysicalOutput(path, value)
+        return PhysicalWriteResult.SUCCESS
     }
 
 }

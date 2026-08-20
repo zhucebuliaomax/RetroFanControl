@@ -64,7 +64,17 @@ object ThermalSensorReader {
     private var sensors: List<Sensor>? = null
 
     fun read(): ThermalSnapshot {
-        val values = discover().mapNotNull { sensor ->
+        return readSensors(discover())
+    }
+
+    /** Reads only the explicitly selected USB control sensor. */
+    fun readUsb(): ThermalSnapshot {
+        val usb = selectUsbSensor(discover().filter { it.kind == ThermalKind.USB })
+        return readSensors(listOfNotNull(usb))
+    }
+
+    private fun readSensors(selected: List<Sensor>): ThermalSnapshot {
+        val values = selected.mapNotNull { sensor ->
             val raw = runCatching { sensor.temp.readText().trim().toDouble() }.getOrNull()
                 ?: return@mapNotNull null
             val celsius = normalize(raw)
@@ -77,6 +87,18 @@ object ThermalSensorReader {
             )
         }
         return ThermalSnapshot(values)
+    }
+
+    private fun selectUsbSensor(items: List<Sensor>): Sensor? =
+        items.firstOrNull { it.type == "usb-therm" }
+            ?: items.firstOrNull { it.type.startsWith("usb-") }
+            ?: items.firstOrNull()
+
+    internal fun selectUsbType(types: List<String>): String? {
+        val normalized = types.map { it.trim().lowercase() }
+        return normalized.firstOrNull { it == "usb-therm" }
+            ?: normalized.firstOrNull { it.startsWith("usb-") }
+            ?: normalized.firstOrNull()
     }
 
     internal fun normalize(raw: Double): Double =

@@ -59,8 +59,9 @@
     <string name="radio_selection_hint">Select with the radio button, or tap an item to edit it.</string>
 
     <string name="notification_channel_name">Fan control</string>
-    <string name="notification_channel_description">Shows the active curve, fan percentage, and CPU/GPU temperatures</string>
-    <string name="notification_content">%1$s · %2$d%% · CPU %3$s · GPU %4$s</string>
+    <string name="notification_channel_description">Shows the four active control schemes and fan control faults</string>
+    <string name="notification_control_summary">Fan: %1$s · Joysticks: %2$s · Buttons: %3$s · Frequency: %4$s</string>
+    <string name="fan_control_fault_title">Fan control fault</string>
     <string name="profile_switch_toast_message">Switched to %1$s profile</string>
     <string name="profile_control_off">Off</string>
 

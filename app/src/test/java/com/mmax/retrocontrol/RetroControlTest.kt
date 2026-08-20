@@ -22,6 +22,8 @@ import com.mmax.retrocontrol.data.FanSelectionPreferences
 import com.mmax.retrocontrol.data.FanSelectionSource
 import com.mmax.retrocontrol.data.PresetPreferences
 import com.mmax.retrocontrol.hardware.FanResponseController
+import com.mmax.retrocontrol.hardware.ActiveFanSource
+import com.mmax.retrocontrol.hardware.FanRuntimePolicy
 import com.mmax.retrocontrol.data.UsbThermalFanControl
 import com.mmax.retrocontrol.hardware.GamepadController
 import com.mmax.retrocontrol.hardware.ThermalReading
@@ -542,5 +544,73 @@ class RetroControlTest {
 
         assertEquals("Profile.2", uniqueImportedName("Profile", names))
         assertEquals("Other", uniqueImportedName("Other", names))
+    }
+
+    @Test
+    fun fanRuntime_applicationCurveOverridesUsbWhileInteractive() {
+        assertEquals(
+            ActiveFanSource.APPLICATION,
+            FanRuntimePolicy.selectSource(
+                applicationCurveEnabled = true,
+                applicationSuspendedForScreenOff = false,
+                usbCurveEnabled = true,
+                externalPowerConnected = true,
+            ),
+        )
+    }
+
+    @Test
+    fun fanRuntime_usesUsbOnlyWhenApplicationCurveCannotRun() {
+        assertEquals(
+            ActiveFanSource.USB,
+            FanRuntimePolicy.selectSource(true, true, true, true),
+        )
+        assertEquals(
+            ActiveFanSource.USB,
+            FanRuntimePolicy.selectSource(false, false, true, true),
+        )
+        assertEquals(
+            ActiveFanSource.NONE,
+            FanRuntimePolicy.selectSource(false, false, true, false),
+        )
+    }
+
+    @Test
+    fun fanRuntime_overlayKeepsOriginalSamplingCadence() {
+        assertEquals(
+            500L,
+            FanRuntimePolicy.sampleIntervalMs(
+                ActiveFanSource.APPLICATION,
+                overlayVisible = true,
+                belowApplicationStart = true,
+            ),
+        )
+        assertEquals(300L, FanRuntimePolicy.responseIntervalMs(overlayVisible = true))
+    }
+
+    @Test
+    fun fanRuntime_rechecksCoolApplicationAtLowRate() {
+        assertTrue(FanRuntimePolicy.isSafelyBelowStart(44.0, 50))
+        assertEquals(
+            3_000L,
+            FanRuntimePolicy.sampleIntervalMs(
+                ActiveFanSource.APPLICATION,
+                overlayVisible = false,
+                belowApplicationStart = true,
+            ),
+        )
+        assertEquals(1_000L, FanRuntimePolicy.sampleIntervalMs(
+            ActiveFanSource.APPLICATION,
+            overlayVisible = false,
+            belowApplicationStart = false,
+        ))
+    }
+
+    @Test
+    fun usbSensorSelectionPrefersUsbTherm() {
+        assertEquals(
+            "usb-therm",
+            ThermalSensorReader.selectUsbType(listOf("usb", "usb-therm")),
+        )
     }
 }
