@@ -97,7 +97,6 @@ import com.mmax.retrocontrol.R
 import com.mmax.retrocontrol.designsystem.FocusScrollMargin
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 import com.mmax.retrocontrol.designsystem.settingsSegmentedShapes
-import com.mmax.retrocontrol.designsystem.TransferContextMenuContainer
 
 private enum class AppListFilter {
     GAME,
@@ -163,9 +162,6 @@ internal fun AdaptiveDashboardScaffold(
     controlFocusRequesters: List<FocusRequester>,
     appFocusRequester: FocusRequester,
     emptyDetailFocusRequester: FocusRequester,
-    onImport: () -> Unit,
-    onExportControl: (ControlModule) -> Unit,
-    onExportApp: (String) -> Unit,
     fanContent: @Composable () -> Unit,
     fanAction: @Composable () -> Unit,
     joystickContent: @Composable () -> Unit,
@@ -259,8 +255,6 @@ internal fun AdaptiveDashboardScaffold(
                     showTwoPanes = showTwoControlPanes,
                     controlFocusRequesters = controlFocusRequesters,
                     emptyDetailFocusRequester = emptyDetailFocusRequester,
-                    onImport = onImport,
-                    onExport = onExportControl,
                     fanContent = fanContent,
                     fanAction = fanAction,
                     joystickContent = joystickContent,
@@ -279,8 +273,6 @@ internal fun AdaptiveDashboardScaffold(
                     installedApps = installedApps,
                     showTwoPanes = showTwoControlPanes,
                     appFocusRequester = appFocusRequester,
-                    onImport = onImport,
-                    onExport = onExportApp,
                     appProfileContent = appProfileContent,
                 )
 
@@ -339,8 +331,6 @@ private fun ControlsPage(
     showTwoPanes: Boolean,
     controlFocusRequesters: List<FocusRequester>,
     emptyDetailFocusRequester: FocusRequester,
-    onImport: () -> Unit,
-    onExport: (ControlModule) -> Unit,
     fanContent: @Composable () -> Unit,
     fanAction: @Composable () -> Unit,
     joystickContent: @Composable () -> Unit,
@@ -366,8 +356,6 @@ private fun ControlsPage(
                 selectedControl = selectedControl,
                 onControlSelected = onControlSelected,
                 focusRequesters = controlFocusRequesters,
-                onImport = onImport,
-                onExport = onExport,
                 modifier = Modifier.width(360.dp),
             )
             selectedControl?.let { control ->
@@ -401,8 +389,6 @@ private fun ControlsPage(
             selectedControl = null,
             onControlSelected = onControlSelected,
             focusRequesters = controlFocusRequesters,
-            onImport = onImport,
-            onExport = onExport,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
@@ -435,8 +421,6 @@ private fun ControlListPane(
     selectedControl: ControlModule?,
     onControlSelected: (ControlModule) -> Unit,
     focusRequesters: List<FocusRequester>,
-    onImport: () -> Unit,
-    onExport: (ControlModule) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -472,8 +456,6 @@ private fun ControlListPane(
                             down = focusRequesters[ControlModule.FAN.ordinal]
                         },
                     onClick = { onControlSelected(ControlModule.PRESET) },
-                    onImport = onImport,
-                    onExport = { onExport(ControlModule.PRESET) },
                 )
                 Spacer(Modifier.size(12.dp))
                 val standardControls = listOf(
@@ -506,8 +488,6 @@ private fun ControlListPane(
                                     }
                                 },
                             onClick = { onControlSelected(control) },
-                            onImport = onImport,
-                            onExport = { onExport(control) },
                         )
                     }
                 }
@@ -526,47 +506,37 @@ private fun ControlModuleRow(
     selected: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-    onImport: () -> Unit,
-    onExport: () -> Unit,
 ) {
-    TransferContextMenuContainer(
-        importLabel = stringResource(R.string.import_items),
-        exportLabel = stringResource(R.string.export_items),
-        onImport = onImport,
-        onExport = onExport,
-    ) { onLongClick ->
-        SegmentedListItem(
-            selected = selected,
-            onClick = onClick,
-            onLongClick = onLongClick,
-            modifier = modifier
-                .fillMaxWidth()
-                .bringIntoViewOnFocus(),
-            shapes = settingsSegmentedShapes(
-                index = index,
-                count = count,
-            ),
-            colors = ListItemDefaults.segmentedColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            ),
-            trailingContent = {
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                )
-            },
-            content = {
-                Text(
-                    text = stringResource(control.label),
-                    style = if (selected) {
-                        MaterialTheme.typography.titleMediumEmphasized
-                    } else {
-                        MaterialTheme.typography.titleMedium
-                    },
-                )
-            },
-        )
-    }
+    SegmentedListItem(
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .bringIntoViewOnFocus(),
+        shapes = settingsSegmentedShapes(
+            index = index,
+            count = count,
+        ),
+        colors = ListItemDefaults.segmentedColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        ),
+        trailingContent = {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+            )
+        },
+        content = {
+            Text(
+                text = stringResource(control.label),
+                style = if (selected) {
+                    MaterialTheme.typography.titleMediumEmphasized
+                } else {
+                    MaterialTheme.typography.titleMedium
+                },
+            )
+        },
+    )
 }
 
 @Composable
@@ -705,8 +675,6 @@ private fun AppsPage(
     installedApps: List<InstalledAppInfo>,
     showTwoPanes: Boolean,
     appFocusRequester: FocusRequester,
-    onImport: () -> Unit,
-    onExport: (String) -> Unit,
     appProfileContent: @Composable (String) -> Unit,
 ) {
     BackHandler(enabled = !showTwoPanes && selectedApp != null) {
@@ -724,8 +692,6 @@ private fun AppsPage(
                 installedApps = installedApps,
                 onAppSelected = { onAppSelected(it) },
                 focusRequester = appFocusRequester,
-                onImport = onImport,
-                onExport = onExport,
                 modifier = Modifier.width(360.dp),
             )
             selectedApp?.let { appKey ->
@@ -751,8 +717,6 @@ private fun AppsPage(
             installedApps = installedApps,
             onAppSelected = { onAppSelected(it) },
             focusRequester = appFocusRequester,
-            onImport = onImport,
-            onExport = onExport,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
@@ -777,8 +741,6 @@ private fun AppListPane(
     installedApps: List<InstalledAppInfo>,
     onAppSelected: (String) -> Unit,
     focusRequester: FocusRequester,
-    onImport: () -> Unit,
-    onExport: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -957,65 +919,57 @@ private fun AppListPane(
                         verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
                     ) {
                         filteredApps.forEachIndexed { index, app ->
-                            TransferContextMenuContainer(
-                                importLabel = stringResource(R.string.import_items),
-                                exportLabel = stringResource(R.string.export_items),
-                                onImport = onImport,
-                                onExport = { onExport(app.packageName) },
-                            ) { onLongClick ->
-                                SegmentedListItem(
-                                    selected = selectedApp == app.packageName,
-                                    onClick = { onAppSelected(app.packageName) },
-                                    onLongClick = onLongClick,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .then(
-                                            if (index == 0) Modifier.focusRequester(focusRequester)
-                                            else Modifier
+                            SegmentedListItem(
+                                selected = selectedApp == app.packageName,
+                                onClick = { onAppSelected(app.packageName) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (index == 0) Modifier.focusRequester(focusRequester)
+                                        else Modifier
+                                    )
+                                    .bringIntoViewOnFocus(),
+                                shapes = settingsSegmentedShapes(
+                                    index = index,
+                                    count = filteredApps.size,
+                                ),
+                                colors = ListItemDefaults.segmentedColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                ),
+                                leadingContent = {
+                                    app.icon?.let { bitmap ->
+                                        Image(
+                                            bitmap = remember(bitmap) { bitmap.asImageBitmap() },
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(42.dp)
+                                                .clip(CircleShape),
                                         )
-                                        .bringIntoViewOnFocus(),
-                                    shapes = settingsSegmentedShapes(
-                                        index = index,
-                                        count = filteredApps.size,
-                                    ),
-                                    colors = ListItemDefaults.segmentedColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                    ),
-                                    leadingContent = {
-                                        app.icon?.let { bitmap ->
-                                            Image(
-                                                bitmap = remember(bitmap) { bitmap.asImageBitmap() },
-                                                contentDescription = null,
-                                                modifier = Modifier
-                                                    .size(42.dp)
-                                                    .clip(CircleShape),
-                                            )
-                                        }
-                                    },
-                                    supportingContent = {
-                                        Text(
-                                            text = app.profileSummary,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    },
-                                    trailingContent = {
-                                        Icon(Icons.Default.ChevronRight, contentDescription = null)
-                                    },
-                                    content = {
-                                        Text(
-                                            text = app.label,
-                                            style = if (selectedApp == app.packageName) {
-                                                MaterialTheme.typography.titleMediumEmphasized
-                                            } else {
-                                                MaterialTheme.typography.titleMedium
-                                            },
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    },
-                                )
-                            }
+                                    }
+                                },
+                                supportingContent = {
+                                    Text(
+                                        text = app.profileSummary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                },
+                                trailingContent = {
+                                    Icon(Icons.Default.ChevronRight, contentDescription = null)
+                                },
+                                content = {
+                                    Text(
+                                        text = app.label,
+                                        style = if (selectedApp == app.packageName) {
+                                            MaterialTheme.typography.titleMediumEmphasized
+                                        } else {
+                                            MaterialTheme.typography.titleMedium
+                                        },
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                },
+                            )
                         }
                     }
                 }

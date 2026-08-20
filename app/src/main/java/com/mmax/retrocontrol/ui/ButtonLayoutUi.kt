@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -53,7 +54,6 @@ import com.mmax.retrocontrol.data.GamepadButtonMapping
 import com.mmax.retrocontrol.data.GamepadTriggerMode
 import com.mmax.retrocontrol.designsystem.SecondaryMenuList
 import com.mmax.retrocontrol.designsystem.SecondaryMenuListItem
-import com.mmax.retrocontrol.designsystem.TransferContextMenuContainer
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 import com.mmax.retrocontrol.designsystem.settingsSegmentedShapes
 
@@ -98,8 +98,6 @@ fun ButtonLayoutProfilesSection(
     profiles: List<ButtonLayoutProfile>,
     onProfileSelected: (String) -> Unit,
     onDeleteProfile: (String) -> Unit,
-    onImport: () -> Unit,
-    onExport: (String) -> Unit,
     profileModifier: (Int) -> Modifier = { Modifier },
 ) {
     SecondaryMenuList {
@@ -112,27 +110,19 @@ fun ButtonLayoutProfilesSection(
                     stringResource(profile.m2.labelRes),
                     stringResource(profile.triggerMode.labelRes),
                 )
-                TransferContextMenuContainer(
-                    importLabel = stringResource(R.string.import_items),
-                    exportLabel = stringResource(R.string.export_items),
-                    onImport = onImport,
-                    onExport = { onExport(profile.id) },
-                ) { onLongClick ->
-                    SecondaryMenuListItem(
-                        index = index,
-                        count = profiles.size,
-                        onClick = { onProfileSelected(profile.id) },
-                        onLongClick = onLongClick,
-                        trailingContent = {
-                            Icon(Icons.Default.ChevronRight, contentDescription = null)
-                        },
-                        modifier = profileModifier(index).bringIntoViewOnFocus(),
-                        supportingContent = { Text(summary) },
-                        content = {
-                            Text(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        },
-                    )
-                }
+                SecondaryMenuListItem(
+                    index = index,
+                    count = profiles.size,
+                    onClick = { onProfileSelected(profile.id) },
+                    trailingContent = {
+                        Icon(Icons.Default.ChevronRight, contentDescription = null)
+                    },
+                    modifier = profileModifier(index).bringIntoViewOnFocus(),
+                    supportingContent = { Text(summary) },
+                    content = {
+                        Text(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    },
+                )
             }
         }
     }
@@ -156,6 +146,7 @@ fun ButtonLayoutProfileEditorDialog(
     onM2Selected: (GamepadButtonMapping) -> Unit,
     onTriggerModeSelected: (GamepadTriggerMode) -> Unit,
     onRename: (String) -> Unit,
+    onExport: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -190,6 +181,15 @@ fun ButtonLayoutProfileEditorDialog(
                             Icon(
                                 painterResource(R.drawable.ic_edit_square),
                                 contentDescription = stringResource(R.string.rename_button_layout),
+                            )
+                        }
+                        IconButton(
+                            onClick = onExport,
+                            shapes = IconButtonDefaults.shapes(),
+                        ) {
+                            Icon(
+                                Icons.Default.FileUpload,
+                                contentDescription = stringResource(R.string.export_items),
                             )
                         }
                         IconButton(

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -52,7 +53,6 @@ import com.mmax.retrocontrol.data.PerformanceProfileConfig
 import com.mmax.retrocontrol.data.displayName
 import com.mmax.retrocontrol.designsystem.SecondaryMenuList
 import com.mmax.retrocontrol.designsystem.SecondaryMenuListItem
-import com.mmax.retrocontrol.designsystem.TransferContextMenuContainer
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 import java.util.Locale
 import kotlin.math.abs
@@ -63,8 +63,6 @@ fun PerformanceProfilesSection(
     config: PerformanceProfileConfig,
     onProfileSelected: (String) -> Unit,
     onDeleteProfile: (String) -> Unit,
-    onImport: () -> Unit,
-    onExport: (String) -> Unit,
     profileModifier: (Int) -> Modifier = { Modifier },
 ) {
     val context = LocalContext.current
@@ -78,33 +76,25 @@ fun PerformanceProfilesSection(
     SecondaryMenuList {
         config.profiles.forEachIndexed { index, profile ->
             key(profile.id) {
-                TransferContextMenuContainer(
-                    importLabel = stringResource(R.string.import_items),
-                    exportLabel = stringResource(R.string.export_items),
-                    onImport = onImport,
-                    onExport = { onExport(profile.id) },
-                ) { onLongClick ->
-                    SecondaryMenuListItem(
-                        index = index,
-                        count = config.profiles.size,
-                        onClick = { onProfileSelected(profile.id) },
-                        onLongClick = onLongClick,
-                        trailingContent = if (profile.isEditable) {
-                            { Icon(Icons.Default.ChevronRight, contentDescription = null) }
-                        } else {
-                            null
-                        },
-                        supportingContent = { Text(profile.frequencySummary(config.policies)) },
-                        modifier = profileModifier(index).bringIntoViewOnFocus(),
-                        content = {
-                            Text(
-                                text = profile.displayName(context),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
-                    )
-                }
+                SecondaryMenuListItem(
+                    index = index,
+                    count = config.profiles.size,
+                    onClick = { onProfileSelected(profile.id) },
+                    trailingContent = if (profile.isEditable) {
+                        { Icon(Icons.Default.ChevronRight, contentDescription = null) }
+                    } else {
+                        null
+                    },
+                    supportingContent = { Text(profile.frequencySummary(config.policies)) },
+                    modifier = profileModifier(index).bringIntoViewOnFocus(),
+                    content = {
+                        Text(
+                            text = profile.displayName(context),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                )
             }
         }
     }
@@ -128,6 +118,7 @@ fun PerformanceProfileEditorDialog(
     profile: PerformanceProfile,
     policies: List<CpuFrequencyPolicy>,
     onSave: (String, Map<Int, Int>) -> Unit,
+    onExport: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -173,6 +164,15 @@ fun PerformanceProfileEditorDialog(
                             Icon(
                                 painterResource(R.drawable.ic_edit_square),
                                 contentDescription = stringResource(R.string.rename_performance_profile),
+                            )
+                        }
+                        IconButton(
+                            onClick = onExport,
+                            shapes = IconButtonDefaults.shapes(),
+                        ) {
+                            Icon(
+                                Icons.Default.FileUpload,
+                                contentDescription = stringResource(R.string.export_items),
                             )
                         }
                         IconButton(

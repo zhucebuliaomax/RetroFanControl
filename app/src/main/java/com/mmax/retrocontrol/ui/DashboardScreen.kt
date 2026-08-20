@@ -9,7 +9,6 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.os.SystemClock
-import android.provider.OpenableColumns
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -45,6 +44,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.AlertDialog
@@ -107,6 +107,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.json.JSONObject
 import com.mmax.retrocontrol.R
 import com.mmax.retrocontrol.BuildConfig
 import com.mmax.retrocontrol.RootAccessManager
@@ -114,7 +115,6 @@ import com.mmax.retrocontrol.data.ControlItemJson
 import com.mmax.retrocontrol.data.ControlPresetCatalog
 import com.mmax.retrocontrol.data.FanCurvePoint
 import com.mmax.retrocontrol.data.AppProfilePreferences
-import com.mmax.retrocontrol.data.AppControlProfile
 import com.mmax.retrocontrol.data.displayName
 import com.mmax.retrocontrol.designsystem.FocusScrollMargin
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
@@ -157,37 +157,6 @@ fun DashboardScreen(
     val context = LocalContext.current
     val resources = LocalResources.current
     var pendingExportFiles by remember { mutableStateOf<List<PendingExportFile>>(emptyList()) }
-    val importItemsLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val uris = result.data.selectedDocumentUris()
-            var readFailures = 0
-            val jsonFiles = uris.mapNotNull { uri ->
-                runCatching {
-                    val displayName = context.contentResolver.displayName(uri)
-                    require(displayName == null || displayName.endsWith(".json", ignoreCase = true))
-                    context.contentResolver.openInputStream(uri)
-                        ?.bufferedReader()
-                        ?.use { it.readText() }
-                        ?: error("Unable to open selected file")
-                }.getOrElse {
-                    readFailures++
-                    null
-                }
-            }
-            val imported = vm.importControlItems(jsonFiles)
-            Toast.makeText(
-                context,
-                resources.getString(
-                    R.string.items_import_result,
-                    imported.imported,
-                    imported.failed + readFailures,
-                ),
-                Toast.LENGTH_SHORT,
-            ).show()
-        }
-    }
     val exportItemsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -229,7 +198,14 @@ fun DashboardScreen(
                     ?.bufferedReader()
                     ?.use { it.readText() }
                     ?: error("Unable to open import file")
-                vm.importAllData(json)
+                when (JSONObject(json).optString("format")) {
+                    "retro-control-data" -> vm.importAllData(json)
+                    "retro-control-item", "fan-curve" -> {
+                        val result = vm.importControlItems(listOf(json))
+                        check(result.imported == 1 && result.failed == 0)
+                    }
+                    else -> error("Unsupported data file")
+                }
             }.isSuccess
             Toast.makeText(
                 context,
@@ -415,28 +391,6 @@ fun DashboardScreen(
         exportItemsLauncher.launch(controlItemsExportDirectoryIntent())
     }
 
-    fun beginAppExport(packageName: String) {
-        val app = state.installedApps.firstOrNull { it.packageName == packageName }
-        val name = app?.label ?: packageName
-        val profile = state.appProfiles[packageName] ?: AppControlProfile(packageName)
-        val json = ControlItemJson.encodeAppProfile(
-            name = name,
-            profile = profile,
-            presetJson = profile.presetId?.let(::encodedPreset),
-            fanCurveJson = state.fanConfig.catalog.profile(profile.fanCurveId)?.let {
-                ControlItemJson.encodeFanCurve(it.displayName(context), it)
-            },
-            joystickJson = state.joystickProfiles.profile(profile.joystickId)
-                ?.let(ControlItemJson::encodeJoystick),
-            buttonLayoutJson = state.buttonLayoutProfiles.profile(profile.buttonLayoutId)
-                ?.let(ControlItemJson::encodeButtonLayout),
-            performanceJson = state.performanceProfiles.profile(profile.performanceProfileId)
-                ?.let { ControlItemJson.encodePerformance(it.displayName(context), it) },
-        )
-        pendingExportFiles = listOf(PendingExportFile(name, json))
-        exportItemsLauncher.launch(controlItemsExportDirectoryIntent())
-    }
-
     BackHandler {
         val now = SystemClock.elapsedRealtime()
         if (now - lastBackPressedAt <= 2_000L) {
@@ -566,18 +520,6 @@ fun DashboardScreen(
         controlFocusRequesters = controlFocusRequesters,
         appFocusRequester = appFocusRequester,
         emptyDetailFocusRequester = emptyDetailFocusRequester,
-        onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
-        onExportControl = { control ->
-            val kind = when (control) {
-                ControlModule.PRESET -> ExportListKind.PRESET
-                ControlModule.FAN -> ExportListKind.FAN
-                ControlModule.JOYSTICK -> ExportListKind.JOYSTICK
-                ControlModule.BUTTON_LAYOUT -> ExportListKind.BUTTON_LAYOUT
-                ControlModule.CORE -> ExportListKind.PERFORMANCE
-            }
-            beginControlExport(kind)
-        },
-        onExportApp = ::beginAppExport,
         fanContent = {
             FanProfilesSection(
                 state = FanProfileSectionState(
@@ -592,10 +534,6 @@ fun DashboardScreen(
                 onProfileSelected = { profileId ->
                     editingProfileId = profileId
                 },
-                importLabel = stringResource(R.string.import_items),
-                exportLabel = stringResource(R.string.export_items),
-                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
-                onExport = { beginControlExport(ExportListKind.FAN, setOf(it)) },
                 showTitle = false,
                 offModifier = Modifier
                     .focusRequester(fanProfileFocusRequesters[0])
@@ -634,7 +572,13 @@ fun DashboardScreen(
                     )
                 },
                 modifier = Modifier
-                    .focusRequester(addCurveFocusRequester),
+                    .focusRequester(addCurveFocusRequester)
+                    .focusProperties {
+                        up = fanProfileFocusRequesters.last()
+                        down = FocusRequester.Default
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
             )
         },
         joystickContent = {
@@ -652,10 +596,6 @@ fun DashboardScreen(
                 },
                 onProfileSelected = { editingJoystickProfileId = it },
                 onDeleteProfile = vm::deleteJoystickProfile,
-                importLabel = stringResource(R.string.import_items),
-                exportLabel = stringResource(R.string.export_items),
-                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
-                onExport = { beginControlExport(ExportListKind.JOYSTICK, setOf(it)) },
                 offModifier = Modifier
                     .focusRequester(joystickProfileFocusRequesters[0])
                     .focusProperties {
@@ -707,8 +647,6 @@ fun DashboardScreen(
                 profiles = state.buttonLayoutProfiles.profiles,
                 onProfileSelected = { editingButtonLayoutProfileId = it },
                 onDeleteProfile = vm::deleteButtonLayoutProfile,
-                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
-                onExport = { beginControlExport(ExportListKind.BUTTON_LAYOUT, setOf(it)) },
                 profileModifier = { index ->
                     Modifier
                         .focusRequester(buttonLayoutProfileFocusRequesters[index])
@@ -767,8 +705,6 @@ fun DashboardScreen(
             PresetManagementSection(
                 presets = presetItems,
                 onPresetClick = { editingPresetId = it },
-                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
-                onExport = { beginControlExport(ExportListKind.PRESET, setOf(it)) },
                 itemModifier = { index ->
                     Modifier
                         .focusRequester(presetFocusRequesters[index])
@@ -795,7 +731,13 @@ fun DashboardScreen(
                     editingPresetId = vm.addPreset(resources.getString(R.string.new_preset))
                 },
                 modifier = Modifier
-                    .focusRequester(addPresetFocusRequester),
+                    .focusRequester(addPresetFocusRequester)
+                    .focusProperties {
+                        up = presetFocusRequesters.lastOrNull() ?: FocusRequester.Default
+                        down = FocusRequester.Default
+                        left = FocusRequester.Default
+                        right = FocusRequester.Default
+                    },
             )
         },
         performanceContent = {
@@ -803,8 +745,6 @@ fun DashboardScreen(
                 config = state.performanceProfiles,
                 onProfileSelected = { editingPerformanceProfileId = it },
                 onDeleteProfile = vm::deletePerformanceProfile,
-                onImport = { importItemsLauncher.launch(controlItemsImportIntent()) },
-                onExport = { beginControlExport(ExportListKind.PERFORMANCE, setOf(it)) },
                 profileModifier = { index ->
                     Modifier
                         .focusRequester(performanceProfileFocusRequesters[index])
@@ -1219,6 +1159,7 @@ fun DashboardScreen(
             onSetDefault = { vm.setFanCurveAsDefault(profile.id, it) },
             onReset = { vm.resetFanCurve(profile.id) },
             onRename = { vm.renameFanCurve(profile.id, it) },
+            onExport = { beginControlExport(ExportListKind.FAN, setOf(profile.id)) },
             onDelete = {
                 vm.deleteFanCurve(profile.id)
                 restoreFanCurveFocusId = profile.id
@@ -1245,6 +1186,7 @@ fun DashboardScreen(
             onSetDefault = vm::setUsbThermalFanCurveAsDefault,
             onReset = vm::resetUsbThermalFanCurve,
             onRename = null,
+            onExport = null,
             onDelete = null,
             onDismiss = { editingUsbThermalCurve = false },
         )
@@ -1321,6 +1263,7 @@ fun DashboardScreen(
                 )?.let { editingPerformanceProfileId = it }
             },
             onRename = { vm.renamePreset(preset.id, it) },
+            onExport = { beginControlExport(ExportListKind.PRESET, setOf(preset.id)) },
             onDelete = {
                 vm.deletePreset(preset.id)
                 restorePresetFocusId = preset.id
@@ -1343,6 +1286,9 @@ fun DashboardScreen(
                 restorePerformanceFocusId = profile.id
                 editingPerformanceProfileId = null
             },
+            onExport = {
+                beginControlExport(ExportListKind.PERFORMANCE, setOf(profile.id))
+            },
             onDelete = {
                 vm.deletePerformanceProfile(profile.id)
                 restorePerformanceFocusId = profile.id
@@ -1364,6 +1310,9 @@ fun DashboardScreen(
             onM2Selected = { vm.setButtonLayoutM2(profile.id, it) },
             onTriggerModeSelected = { vm.setButtonLayoutTriggerMode(profile.id, it) },
             onRename = { vm.renameButtonLayoutProfile(profile.id, it) },
+            onExport = {
+                beginControlExport(ExportListKind.BUTTON_LAYOUT, setOf(profile.id))
+            },
             onDelete = {
                 vm.deleteButtonLayoutProfile(profile.id)
                 restoreButtonLayoutFocusId = profile.id
@@ -1388,6 +1337,8 @@ fun DashboardScreen(
             },
             onBrightnessSelected = { vm.setJoystickBrightness(profile.id, it) },
             onRename = { vm.renameJoystickProfile(profile.id, it) },
+            onExport = { beginControlExport(ExportListKind.JOYSTICK, setOf(profile.id)) },
+            exportContentDescription = stringResource(R.string.export_items),
             onDelete = {
                 vm.deleteJoystickProfile(profile.id)
                 restoreJoystickFocusId = profile.id
@@ -1413,6 +1364,7 @@ private fun FanCurveEditorDialog(
     onSetDefault: (List<FanCurvePoint>) -> Unit,
     onReset: () -> Unit,
     onRename: ((String) -> Unit)?,
+    onExport: (() -> Unit)?,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -1447,13 +1399,23 @@ private fun FanCurveEditorDialog(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    if (onRename != null && onDelete != null) {
+                    if (onRename != null) {
                         IconButton(onClick = { showRenameDialog = true }) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_edit_square),
                                 contentDescription = stringResource(R.string.rename_curve),
                             )
                         }
+                        if (onExport != null) {
+                            IconButton(onClick = onExport) {
+                                Icon(
+                                    Icons.Default.FileUpload,
+                                    contentDescription = stringResource(R.string.export_items),
+                                )
+                            }
+                        }
+                    }
+                    if (onDelete != null) {
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(
                                 Icons.Default.DeleteForever,
@@ -1644,33 +1606,6 @@ private fun CurveFileButton(
         Text(label)
     }
 }
-
-private fun android.content.ContentResolver.displayName(uri: Uri): String? =
-    query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-        if (cursor.moveToFirst()) cursor.getString(0) else null
-    }
-
-private fun Intent?.selectedDocumentUris(): List<Uri> {
-    val intent = this ?: return emptyList()
-    return buildList {
-        intent.clipData?.let { clips ->
-            repeat(clips.itemCount) { index -> add(clips.getItemAt(index).uri) }
-        }
-        intent.data?.let(::add)
-    }.distinct()
-}
-
-private fun controlItemsImportIntent(): Intent =
-    Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-        addCategory(Intent.CATEGORY_OPENABLE)
-        type = "*/*"
-        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-        putExtra(
-            Intent.EXTRA_MIME_TYPES,
-            arrayOf("application/json", "text/json", "text/plain", "application/octet-stream"),
-        )
-        putExtra(DocumentsContract.EXTRA_INITIAL_URI, downloadsDocumentUri())
-    }
 
 private fun controlItemsExportDirectoryIntent(): Intent =
     Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {

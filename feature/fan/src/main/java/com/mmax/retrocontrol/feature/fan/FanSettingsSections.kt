@@ -26,7 +26,6 @@ import com.mmax.retrocontrol.designsystem.SecondaryMenuList
 import com.mmax.retrocontrol.designsystem.SecondaryMenuListItem
 import com.mmax.retrocontrol.designsystem.SettingsSectionTitle
 import com.mmax.retrocontrol.designsystem.SettingsTokens
-import com.mmax.retrocontrol.designsystem.TransferContextMenuContainer
 
 data class FanProfileSectionState(
     val profiles: List<FanProfileItemUiState>,
@@ -46,10 +45,6 @@ data class FanProfileItemUiState(
 fun FanProfilesSection(
     state: FanProfileSectionState,
     onProfileSelected: (String) -> Unit,
-    importLabel: String,
-    exportLabel: String,
-    onImport: () -> Unit,
-    onExport: (String) -> Unit,
     showTitle: Boolean = true,
     modifier: Modifier = Modifier,
     offModifier: Modifier = Modifier,
@@ -74,26 +69,18 @@ fun FanProfilesSection(
                 modifier = offModifier,
             )
             state.profiles.forEachIndexed { index, profile ->
-                TransferContextMenuContainer(
-                    importLabel = importLabel,
-                    exportLabel = exportLabel,
-                    onImport = onImport,
-                    onExport = { onExport(profile.id) },
-                ) { onLongClick ->
-                    FanProfileListItem(
-                        name = profile.name,
-                        summary = stringResource(
-                            R.string.fanfeature_control_points,
-                            profile.controlPointCount,
-                        ),
-                        index = index + 1,
-                        count = itemCount,
-                        onClick = { onProfileSelected(profile.id) },
-                        onLongClick = onLongClick,
-                        showChevron = true,
-                        modifier = profileModifier(index),
-                    )
-                }
+                FanProfileListItem(
+                    name = profile.name,
+                    summary = stringResource(
+                        R.string.fanfeature_control_points,
+                        profile.controlPointCount,
+                    ),
+                    index = index + 1,
+                    count = itemCount,
+                    onClick = { onProfileSelected(profile.id) },
+                    showChevron = true,
+                    modifier = profileModifier(index),
+                )
             }
         }
     }
@@ -124,7 +111,6 @@ private fun FanProfileListItem(
     index: Int,
     count: Int,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null,
     showChevron: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -132,7 +118,6 @@ private fun FanProfileListItem(
         index = index,
         count = count,
         onClick = onClick,
-        onLongClick = onLongClick,
         content = {
             Text(
                 text = name,

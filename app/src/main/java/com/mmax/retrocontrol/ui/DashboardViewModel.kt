@@ -298,62 +298,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     is ControlItemJson.Item.Preset -> {
                         importPreset(item)
                     }
-                    is ControlItemJson.Item.AppProfile -> {
-                        val current = mutableState.value
-                        var importedProfile = item.value
-                        item.preset?.let {
-                            importedProfile = importedProfile.copy(presetId = importPreset(it))
-                        }
-                        item.fanCurve?.let {
-                            val config = FanCurvePreferences.addImported(
-                                prefs, it.name, it.points, it.defaultPoints,
-                            )
-                            importedProfile = importedProfile.copy(
-                                fanCurveId = config.catalog.profiles.last().id,
-                            )
-                        }
-                        item.joystick?.let {
-                            val catalog = JoystickProfilePreferences.addImported(prefs, it.value)
-                            importedProfile = importedProfile.copy(
-                                joystickId = catalog.profiles.last().id,
-                            )
-                        }
-                        item.buttonLayout?.let {
-                            val catalog = ButtonLayoutProfilePreferences.addImported(prefs, it.value)
-                            importedProfile = importedProfile.copy(
-                                buttonLayoutId = catalog.profiles.last().id,
-                            )
-                        }
-                        item.performance?.let {
-                            val config = PerformanceProfilePreferences.addImported(
-                                prefs, current.performanceProfiles.policies,
-                                it.name, it.maxFrequencies,
-                            )
-                            importedProfile = importedProfile.copy(
-                                performanceProfileId = config.profiles.last().id,
-                            )
-                        }
-                        AppProfilePreferences.setImported(
-                            prefs = prefs,
-                            profile = importedProfile,
-                            availablePresetIds = PresetPreferences.load(
-                                prefs,
-                                FanCurvePreferences.load(prefs).catalog.profiles
-                                    .mapTo(mutableSetOf()) { it.id },
-                                JoystickProfilePreferences.load(prefs).profiles
-                                    .mapTo(mutableSetOf()) { it.id },
-                            ).catalog.presets.mapTo(mutableSetOf()) { it.id },
-                            availableFanCurveIds = FanCurvePreferences.load(prefs).catalog.profiles
-                                .mapTo(mutableSetOf()) { it.id },
-                            availableJoystickProfileIds = JoystickProfilePreferences.load(prefs)
-                                .profiles.mapTo(mutableSetOf()) { it.id },
-                            availablePerformanceProfileIds = PerformanceProfilePreferences.load(
-                                prefs, current.performanceProfiles.policies,
-                            ).profiles.mapTo(mutableSetOf()) { it.id },
-                            availableButtonLayoutProfileIds = ButtonLayoutProfilePreferences
-                                .load(prefs).profiles.mapTo(mutableSetOf()) { it.id },
-                        )
-                    }
                 }
             }.isSuccess
             if (success) {

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -54,7 +55,6 @@ import com.mmax.retrocontrol.data.ControlPreset
 import com.mmax.retrocontrol.designsystem.SecondaryMenuList
 import com.mmax.retrocontrol.designsystem.SecondaryMenuListItem
 import com.mmax.retrocontrol.designsystem.SecondaryMenuSelectableListItem
-import com.mmax.retrocontrol.designsystem.TransferContextMenuContainer
 import com.mmax.retrocontrol.designsystem.settingsSegmentedShapes
 import com.mmax.retrocontrol.designsystem.bringIntoViewOnFocus
 
@@ -95,27 +95,17 @@ private val PresetListItemUiState.summary: String
 fun PresetManagementSection(
     presets: List<PresetListItemUiState>,
     onPresetClick: (String) -> Unit,
-    onImport: () -> Unit,
-    onExport: (String) -> Unit,
     itemModifier: (Int) -> Modifier = { Modifier },
 ) {
     SecondaryMenuList {
         presets.forEachIndexed { index, preset ->
-            TransferContextMenuContainer(
-                importLabel = stringResource(R.string.import_items),
-                exportLabel = stringResource(R.string.export_items),
-                onImport = onImport,
-                onExport = { onExport(preset.id) },
-            ) { onLongClick ->
-                PresetListItem(
-                    preset = preset,
-                    index = index,
-                    count = presets.size,
-                    onClick = { onPresetClick(preset.id) },
-                    onLongClick = onLongClick,
-                    modifier = itemModifier(index),
-                )
-            }
+            PresetListItem(
+                preset = preset,
+                index = index,
+                count = presets.size,
+                onClick = { onPresetClick(preset.id) },
+                modifier = itemModifier(index),
+            )
         }
     }
 }
@@ -178,14 +168,12 @@ private fun PresetListItem(
     index: Int,
     count: Int,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SecondaryMenuListItem(
         index = index,
         count = count,
         onClick = onClick,
-        onLongClick = onLongClick,
         content = {
             Text(
                 text = preset.name,
@@ -222,6 +210,7 @@ fun PresetEditorDialog(
     onPerformanceEdit: (String) -> Unit,
     onAddPerformance: () -> Unit,
     onRename: (String) -> Unit,
+    onExport: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -257,6 +246,15 @@ fun PresetEditorDialog(
                         Icon(
                             painter = painterResource(R.drawable.ic_edit_square),
                             contentDescription = stringResource(R.string.rename_preset),
+                        )
+                    }
+                    IconButton(
+                        onClick = onExport,
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
+                        Icon(
+                            Icons.Default.FileUpload,
+                            contentDescription = stringResource(R.string.export_items),
                         )
                     }
                     if (!preset.isDefault) {

@@ -5,15 +5,12 @@
 
 package com.mmax.retrocontrol.designsystem
 
-import android.os.SystemClock
-import android.view.ViewConfiguration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -30,8 +27,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.BasicAlertDialog
@@ -40,9 +35,6 @@ import androidx.compose.material3.ListItemColors
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.SwipeToDismissBox
@@ -55,9 +47,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,11 +55,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.foundation.text.InlineTextContent
@@ -195,92 +179,6 @@ fun SecondaryMenuList(
     }
 }
 
-/** Material context menu shared by long-press import/export entry points. */
-@Composable
-fun TransferContextMenuContainer(
-    importLabel: String,
-    exportLabel: String,
-    onImport: () -> Unit,
-    onExport: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable (onLongClick: () -> Unit) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    var controllerDownTime by remember { mutableLongStateOf(0L) }
-    var pendingControllerOpen by remember { mutableStateOf(false) }
-    val longPressTimeout = ViewConfiguration.getLongPressTimeout().toLong()
-    Box(
-        modifier.onPreviewKeyEvent { event ->
-            val isConfirmKey = event.key == Key.ButtonA ||
-                event.key == Key.DirectionCenter ||
-                event.key == Key.Enter ||
-                event.key == Key.NumPadEnter
-            if (!isConfirmKey) return@onPreviewKeyEvent false
-            when (event.type) {
-                KeyEventType.KeyDown -> {
-                    if (controllerDownTime == 0L) {
-                        controllerDownTime = SystemClock.uptimeMillis()
-                        pendingControllerOpen = false
-                        false
-                    } else {
-                        // Keep repeats away from the popup's first item while A is held.
-                        true
-                    }
-                }
-                KeyEventType.KeyUp -> {
-                    val heldLongEnough = controllerDownTime > 0L &&
-                        SystemClock.uptimeMillis() - controllerDownTime >= longPressTimeout
-                    controllerDownTime = 0L
-                    if (heldLongEnough || pendingControllerOpen) {
-                        pendingControllerOpen = false
-                        expanded = true
-                        true
-                    } else {
-                        false
-                    }
-                }
-                else -> false
-            }
-        }
-    ) {
-        content {
-            if (controllerDownTime > 0L) pendingControllerOpen = true
-            else expanded = true
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.width(220.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-        ) {
-            DropdownMenuItem(
-                selected = false,
-                shapes = MenuDefaults.itemShapes(),
-                text = { Text(importLabel) },
-                leadingIcon = {
-                    Icon(Icons.Default.FileDownload, contentDescription = null)
-                },
-                onClick = {
-                    expanded = false
-                    onImport()
-                },
-            )
-            DropdownMenuItem(
-                selected = false,
-                shapes = MenuDefaults.itemShapes(),
-                text = { Text(exportLabel) },
-                leadingIcon = {
-                    Icon(Icons.Default.FileUpload, contentDescription = null)
-                },
-                onClick = {
-                    expanded = false
-                    onExport()
-                },
-            )
-        }
-    }
-}
-
 /**
  * Standard row for second-level menu lists.
  *
@@ -292,7 +190,6 @@ fun SecondaryMenuListItem(
     index: Int,
     count: Int,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     keepInteractionShape: Boolean = false,
     colors: ListItemColors? = null,
@@ -306,7 +203,6 @@ fun SecondaryMenuListItem(
     }
     SegmentedListItem(
         onClick = onClick,
-        onLongClick = onLongClick,
         shapes = shapes,
         colors = colors ?: ListItemDefaults.segmentedColors(),
         trailingContent = trailingContent,
