@@ -43,7 +43,7 @@ abstract class GenerateBundledDefaultConfig : DefaultTask() {
             "overlayEnabled", "autoStartEnabled", "profileSwitchToastsEnabled",
             "usbThermalControlEnabled", "usbThermalFanCurveDefault",
             "thermalProtectionDisabled", "preserveBypassCharging",
-            "chargingThreshold", "overlayX", "overlayY",
+            "chargingThreshold", "slowChargingEnabled", "overlayX", "overlayY",
         )
         require(settings.keys.containsAll(requiredSettings)) {
             "Default config is missing settings: ${'$'}{requiredSettings - settings.keys}"
@@ -194,8 +194,8 @@ android {
         applicationId = "com.mmax.retrocontrol"
         minSdk = 26
         targetSdk = 37
-        versionCode = 20037
-        versionName = "2.0.0 beta 37"
+        versionCode = 20038
+        versionName = "2.0.0 beta 38"
     }
 
     buildTypes {

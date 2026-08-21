@@ -40,6 +40,7 @@ import com.mmax.retrocontrol.data.Prefs
 import com.mmax.retrocontrol.data.ChargingConnectionAction
 import com.mmax.retrocontrol.data.ChargingConnectionLogic
 import com.mmax.retrocontrol.data.ChargingControlPreferences
+import com.mmax.retrocontrol.data.ChargeSpeedPreferences
 import com.mmax.retrocontrol.data.UsbThermalFanControl
 import com.mmax.retrocontrol.data.UsbThermalFanCurvePreferences
 import com.mmax.retrocontrol.data.JoystickProfile
@@ -66,6 +67,8 @@ import com.mmax.retrocontrol.tile.JoystickQuickSettingsTile
 import com.mmax.retrocontrol.tile.PerformanceQuickSettingsTile
 import com.mmax.retrocontrol.tile.ButtonLayoutQuickSettingsTile
 import com.mmax.retrocontrol.tile.ChargingQuickSettingsTile
+import com.mmax.retrocontrol.tile.ChargeSpeedQuickSettingsTile
+import com.mmax.retrocontrol.hardware.ChargeSpeedController
 import com.mmax.retrocontrol.hardware.BatteryConnectionReader
 import com.mmax.retrocontrol.hardware.BatteryConnectionState
 import kotlinx.coroutines.CoroutineScope
@@ -73,6 +76,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -168,6 +172,7 @@ class SystemControlService : Service() {
     private var chargingJob: Job? = null
     private var profileSwitchToast: Toast? = null
     private val overlayAdjustmentMutex = Mutex()
+    private val fanLifecycleMutex = Mutex()
     private var overlay: TelemetryOverlay? = null
     private lateinit var joystickEffects: JoystickEffectEngine
     @Volatile
@@ -237,6 +242,7 @@ class SystemControlService : Service() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 Intent.ACTION_SCREEN_OFF -> {
+                    disableOverlayForScreenOff()
                     scheduleScreenOffSuspend()
                     joystickEffects.suspendForScreenOff()
                 }
@@ -260,6 +266,9 @@ class SystemControlService : Service() {
             val powerChanged = lastChargingPowerConnected != battery.powerConnected
             lastChargingPowerConnected = battery.powerConnected
             if (powerChanged) usbFanRevision++
+            if (powerChanged && fanSuspendedForScreenOff) {
+                scope.launch { reconcileScreenOffFanRuntime() }
+            }
             joystickEffects.onBatteryLevelChanged(battery.level)
             when (action) {
                 ChargingConnectionAction.NONE -> Unit
@@ -272,6 +281,7 @@ class SystemControlService : Service() {
             }
             applyChargingControl(battery)
             ChargingQuickSettingsTile.requestRefresh(applicationContext)
+            ChargeSpeedQuickSettingsTile.requestRefresh(applicationContext)
         }
     }
 
@@ -353,6 +363,7 @@ class SystemControlService : Service() {
                 applyChargingControl()
                 ChargingQuickSettingsTile.requestRefresh(applicationContext)
             }
+            Prefs.SLOW_CHARGING_ENABLED -> applyChargeSpeed()
             Prefs.OVERLAY_ENABLED -> {
                 loadOverlayPreference()
                 applyOverlayState()
@@ -411,7 +422,9 @@ class SystemControlService : Service() {
         ButtonLayoutQuickSettingsTile.requestRefresh(applicationContext)
         OverlayTileService.requestRefresh(applicationContext)
         ChargingQuickSettingsTile.requestRefresh(applicationContext)
+        ChargeSpeedQuickSettingsTile.requestRefresh(applicationContext)
         applyChargingControl()
+        applyChargeSpeed()
         if (!getSystemService(PowerManager::class.java).isInteractive) {
             scheduleScreenOffSuspend()
             joystickEffects.suspendForScreenOff()
@@ -426,6 +439,7 @@ class SystemControlService : Service() {
                 applyButtonLayout(force = true)
                 applyPerformanceProfile(force = true)
                 applyChargingControl()
+                applyChargeSpeed()
             }
             ACTION_UPDATE_CHARGING -> applyChargingControl()
             ACTION_SET_PROJECTION_INTENT -> {
@@ -541,6 +555,18 @@ class SystemControlService : Service() {
         chargingJob = scope.launch {
             ChargingControlCoordinator.apply(applicationContext, prefs, batteryOverride)
             ChargingQuickSettingsTile.requestRefresh(applicationContext)
+            ChargeSpeedQuickSettingsTile.requestRefresh(applicationContext)
+        }
+    }
+
+    private fun applyChargeSpeed() {
+        scope.launch {
+            ChargeSpeedController.setSlowChargingEnabled(
+                ChargeSpeedPreferences.isSlowChargingEnabled(prefs),
+            ).onFailure { error ->
+                Log.e(TAG, "Unable to apply charging speed", error)
+            }
+            ChargeSpeedQuickSettingsTile.requestRefresh(applicationContext)
         }
     }
 
@@ -828,23 +854,27 @@ class SystemControlService : Service() {
 
             while (isActive) {
                 val now = android.os.SystemClock.elapsedRealtime()
-                if (now - lastFrequencyReadMs >= 500L) {
+                val presentationSamplingEnabled =
+                    FanRuntimePolicy.shouldSamplePresentation(fanSuspendedForScreenOff)
+                if (presentationSamplingEnabled && now - lastFrequencyReadMs >= 500L) {
                     currentFrequencies = CpuFrequencyController.readCurrentFrequencies(
                         frequencyPolicies.flatMap { it.cpuIds }
                     )
                     lastFrequencyReadMs = now
                 }
 
-                val performanceProfile = activePerformanceProfile
-                TelemetryRepository.updateFrequency(
-                    policies = frequencyPolicies,
-                    currentFrequenciesKhz = currentFrequencies,
-                    targetMaxFrequenciesKhz = performanceProfile?.maxFrequencies.orEmpty(),
-                    adjustEnabled = performanceProfile != null && frequencyPolicies.isNotEmpty(),
-                    activeProfileName = performanceProfile
-                        ?.displayName(this@SystemControlService)
-                        .orEmpty(),
-                )
+                if (presentationSamplingEnabled) {
+                    val performanceProfile = activePerformanceProfile
+                    TelemetryRepository.updateFrequency(
+                        policies = frequencyPolicies,
+                        currentFrequenciesKhz = currentFrequencies,
+                        targetMaxFrequenciesKhz = performanceProfile?.maxFrequencies.orEmpty(),
+                        adjustEnabled = performanceProfile != null && frequencyPolicies.isNotEmpty(),
+                        activeProfileName = performanceProfile
+                            ?.displayName(this@SystemControlService)
+                            .orEmpty(),
+                    )
+                }
 
                 if (!fanControlReady) {
                     if (
@@ -873,10 +903,14 @@ class SystemControlService : Service() {
                 }
                 val sourceChanged = selectedSource != activeSource
                 val configChanged = revision != appliedRevision
+                if ((sourceChanged || configChanged) && !FanController.resetCoolingState()) {
+                    Log.w(TAG, "Unable to reset stale pwm-fan cooling state")
+                }
                 val sampleInterval = FanRuntimePolicy.sampleIntervalMs(
                     source = selectedSource,
                     overlayVisible = overlayVisible,
                     belowApplicationStart = belowApplicationStart,
+                    screenOffSettled = fanSuspendedForScreenOff,
                 )
                 val sampleDue = sourceChanged || configChanged ||
                     now - lastFanSampleMs >= sampleInterval
@@ -982,6 +1016,10 @@ class SystemControlService : Service() {
     }
 
     private fun applyOverlayState() {
+        if (!getSystemService(PowerManager::class.java).isInteractive) {
+            disableOverlayForScreenOff()
+            return
+        }
         if (overlayEnabled && android.provider.Settings.canDrawOverlays(this)) {
             if (overlay == null) {
                 overlay = TelemetryOverlay(
@@ -1148,6 +1186,10 @@ class SystemControlService : Service() {
             delay(5_000L)
             if (!fanSuspendedForScreenOff) {
                 fanSuspendedForScreenOff = true
+                foregroundJob?.cancelAndJoin()
+                foregroundJob = null
+                clearFrequencyTelemetryForScreenOff()
+                reconcileScreenOffFanRuntime()
             }
         }
     }
@@ -1157,7 +1199,67 @@ class SystemControlService : Service() {
         screenOffJob = null
         if (fanSuspendedForScreenOff) {
             fanSuspendedForScreenOff = false
+            startForegroundAppMonitor()
+            scope.launch {
+                fanLifecycleMutex.withLock {
+                    if (fanJob?.isActive != true) startFanLoop()
+                }
+            }
         }
+    }
+
+    private suspend fun reconcileScreenOffFanRuntime() {
+        fanLifecycleMutex.withLock {
+            if (!fanSuspendedForScreenOff) return@withLock
+            if (FanRuntimePolicy.shouldSuspendAllSampling(
+                    screenOffSettled = true,
+                    externalPowerConnected = lastChargingPowerConnected,
+                )
+            ) {
+                fanJob?.cancelAndJoin()
+                fanJob = null
+                val stop = FanController.stopAndResetCoolingState()
+                if (!stop.physicalOutputStopped) {
+                    Log.w(TAG, "Unable to verify stopped physical fan output")
+                }
+                if (!stop.coolingStateReset) {
+                    Log.w(TAG, "Unable to verify pwm-fan cooling state reset")
+                }
+                TelemetryRepository.updateThermal(
+                    thermal = ThermalSnapshot(),
+                    fanPercent = 0,
+                    fanAdjustEnabled = false,
+                    activeCurveName = fanConfig.activeProfile
+                        ?.displayName(this@SystemControlService)
+                        .orEmpty(),
+                    activeCurvePoints = fanConfig.activeProfile?.points.orEmpty(),
+                )
+            } else if (fanJob?.isActive != true) {
+                startFanLoop()
+            }
+        }
+    }
+
+    private fun clearFrequencyTelemetryForScreenOff() {
+        val profile = activePerformanceProfile
+        TelemetryRepository.updateFrequency(
+            policies = frequencyPolicies,
+            currentFrequenciesKhz = emptyMap(),
+            targetMaxFrequenciesKhz = profile?.maxFrequencies.orEmpty(),
+            adjustEnabled = false,
+            activeProfileName = profile?.displayName(this).orEmpty(),
+        )
+    }
+
+    private fun disableOverlayForScreenOff() {
+        overlayEnabled = false
+        overlay?.hide()
+        overlay = null
+        overlayVisible = false
+        if (prefs.getBoolean(Prefs.OVERLAY_ENABLED, false)) {
+            prefs.edit { putBoolean(Prefs.OVERLAY_ENABLED, false) }
+        }
+        OverlayTileService.requestRefresh(applicationContext)
     }
 
     private fun createNotificationChannel() {

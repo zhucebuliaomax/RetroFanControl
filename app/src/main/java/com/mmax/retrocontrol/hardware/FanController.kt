@@ -25,6 +25,11 @@ object FanController {
         data class Fault(val code: String) : WriteResult
     }
 
+    data class StopResult(
+        val physicalOutputStopped: Boolean,
+        val coolingStateReset: Boolean,
+    )
+
     private const val ERROR_OUTPUT_UNAVAILABLE = "FC-E10"
     private const val ERROR_OUTPUT_WRITE = "FC-E11"
     private const val ERROR_OUTPUT_VERIFY = "FC-E12"
@@ -106,6 +111,27 @@ object FanController {
         return Shell.cmd("echo $clamped > $path/cur_state 2>/dev/null").exec().isSuccess
     }
 
+    /** Clears stale kernel cooling demand before a new application curve takes ownership. */
+    @Synchronized
+    fun resetCoolingState(): Boolean {
+        val path = discoverFanPath()
+        val reset = path != null && writeAndVerifyRaw("$path/cur_state", 0)
+        lastAppliedOutput = null
+        return reset
+    }
+
+    /** Stops the physical output and leaves the kernel cooling demand verified at zero. */
+    @Synchronized
+    fun stopAndResetCoolingState(): StopResult {
+        lastAppliedOutput = null
+        val physicalOutputStopped = when (writePercent(0.0)) {
+            is WriteResult.Success -> true
+            is WriteResult.Fault -> false
+        }
+        val coolingStateReset = resetCoolingState()
+        return StopResult(physicalOutputStopped, coolingStateReset)
+    }
+
     /** Writes and verifies only changed physical output, with cooling-state fallback. */
     @Synchronized
     fun writePercent(value: Double): WriteResult {
@@ -152,6 +178,14 @@ object FanController {
         if (actual != value) return PhysicalWriteResult.VERIFY_FAILED
         lastAppliedOutput = AppliedPhysicalOutput(path, value)
         return PhysicalWriteResult.SUCCESS
+    }
+
+    private fun writeAndVerifyRaw(path: String, value: Int): Boolean {
+        val result = Shell.cmd(
+            "echo $value > $path 2>/dev/null && cat $path 2>/dev/null"
+        ).exec()
+        if (!result.isSuccess) return false
+        return result.out.lastOrNull()?.trim()?.toIntOrNull() == value
     }
 
 }

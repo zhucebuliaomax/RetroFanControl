@@ -9,6 +9,7 @@ object FanRuntimePolicy {
     const val NORMAL_SAMPLE_INTERVAL_MS = 1_000L
     const val BELOW_START_SAMPLE_INTERVAL_MS = 3_000L
     const val USB_SAMPLE_INTERVAL_MS = 2_000L
+    const val SCREEN_OFF_CHARGING_SAMPLE_INTERVAL_MS = NORMAL_SAMPLE_INTERVAL_MS
     const val OVERLAY_RESPONSE_INTERVAL_MS = 300L
     const val NORMAL_RESPONSE_INTERVAL_MS = 500L
     const val BELOW_START_MARGIN_C = 5.0
@@ -29,15 +30,27 @@ object FanRuntimePolicy {
         source: ActiveFanSource,
         overlayVisible: Boolean,
         belowApplicationStart: Boolean,
+        screenOffSettled: Boolean = false,
     ): Long = when (source) {
         ActiveFanSource.APPLICATION -> when {
             overlayVisible -> OVERLAY_SAMPLE_INTERVAL_MS
             belowApplicationStart -> BELOW_START_SAMPLE_INTERVAL_MS
             else -> NORMAL_SAMPLE_INTERVAL_MS
         }
-        ActiveFanSource.USB -> USB_SAMPLE_INTERVAL_MS
+        ActiveFanSource.USB -> if (screenOffSettled) {
+            SCREEN_OFF_CHARGING_SAMPLE_INTERVAL_MS
+        } else {
+            USB_SAMPLE_INTERVAL_MS
+        }
         ActiveFanSource.NONE -> Long.MAX_VALUE
     }
+
+    fun shouldSuspendAllSampling(
+        screenOffSettled: Boolean,
+        externalPowerConnected: Boolean,
+    ): Boolean = screenOffSettled && !externalPowerConnected
+
+    fun shouldSamplePresentation(screenOffSettled: Boolean): Boolean = !screenOffSettled
 
     fun responseIntervalMs(overlayVisible: Boolean): Long =
         if (overlayVisible) OVERLAY_RESPONSE_INTERVAL_MS else NORMAL_RESPONSE_INTERVAL_MS

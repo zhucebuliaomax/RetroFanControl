@@ -36,6 +36,7 @@ object Prefs {
     const val CHARGING_THRESHOLD = "charging_threshold"
     const val CHARGING_THRESHOLD_REACHED = "charging_threshold_reached"
     const val PRESERVE_BYPASS_CHARGING = "preserve_bypass_charging"
+    const val SLOW_CHARGING_ENABLED = "slow_charging_enabled"
 
     // Version 1 migration keys.
     const val FAN_CURVE_QUIET = "fan_curve_quiet"

@@ -9,12 +9,16 @@ import com.mmax.retrocontrol.RootAccessManager
 import com.mmax.retrocontrol.data.FanCurvePreferences
 import com.mmax.retrocontrol.data.Prefs
 import com.mmax.retrocontrol.data.ChargingControlPreferences
+import com.mmax.retrocontrol.data.ChargeSpeedPreferences
 import com.mmax.retrocontrol.data.BundledDefaultConfig
 import com.mmax.retrocontrol.hardware.BatteryConnectionReader
+import com.mmax.retrocontrol.hardware.ChargeSpeedController
 import com.mmax.retrocontrol.tile.FanQuickSettingsTile
 import com.mmax.retrocontrol.tile.OverlayTileService
 import com.mmax.retrocontrol.tile.ButtonLayoutQuickSettingsTile
 import com.mmax.retrocontrol.tile.ChargingQuickSettingsTile
+import com.mmax.retrocontrol.tile.ChargeSpeedQuickSettingsTile
+import com.topjohnwu.superuser.Shell
 
 /**
  * Restores hardware profiles after boot only when the user opted in.
@@ -47,11 +51,15 @@ class BootReceiver : BroadcastReceiver() {
         }
         ChargingQuickSettingsTile.requestRefresh(appContext)
 
-        if (!prefs.getBoolean(
-                Prefs.AUTO_START_ENABLED,
-                BundledDefaultConfig.settingBoolean("autoStartEnabled"),
-            ) && !restoreChargingThreshold
-        ) {
+        val restoreSlowCharging = ChargeSpeedPreferences.isSlowChargingEnabled(prefs)
+        ChargeSpeedQuickSettingsTile.requestRefresh(appContext)
+
+        val autoStartEnabled = prefs.getBoolean(
+            Prefs.AUTO_START_ENABLED,
+            BundledDefaultConfig.settingBoolean("autoStartEnabled"),
+        )
+
+        if (!autoStartEnabled && !restoreChargingThreshold && !restoreSlowCharging) {
             FanCurvePreferences.select(prefs, null)
             FanQuickSettingsTile.requestRefresh(appContext)
             Log.i(TAG, "Boot detected — automatic start is disabled")
@@ -61,21 +69,32 @@ class BootReceiver : BroadcastReceiver() {
 
         Log.i(TAG, "Boot detected — preparing automatic control-service start")
         RootAccessManager.ensureRoot { granted ->
-            val started = granted && runCatching {
-                SystemControlService.startOrUpdate(appContext)
-            }.onFailure { error ->
-                Log.e(TAG, "Unable to start fan control after boot", error)
-            }.isSuccess
+            Shell.EXECUTOR.execute {
+                if (granted && restoreSlowCharging) {
+                    ChargeSpeedController.setSlowChargingEnabled(true)
+                        .onFailure { error ->
+                            Log.e(TAG, "Unable to restore slow charging after boot", error)
+                        }
+                }
 
-            if (!started) {
-                FanCurvePreferences.select(prefs, null)
-                if (!granted) Log.w(TAG, "Root access unavailable after boot")
+                val shouldStartControlService = autoStartEnabled || restoreChargingThreshold
+                val started = !shouldStartControlService || granted && runCatching {
+                    SystemControlService.startOrUpdate(appContext)
+                }.onFailure { error ->
+                    Log.e(TAG, "Unable to start fan control after boot", error)
+                }.isSuccess
+
+                if (!started) {
+                    FanCurvePreferences.select(prefs, null)
+                    if (!granted) Log.w(TAG, "Root access unavailable after boot")
+                }
+                FanQuickSettingsTile.requestRefresh(appContext)
+                OverlayTileService.requestRefresh(appContext)
+                ButtonLayoutQuickSettingsTile.requestRefresh(appContext)
+                ChargingQuickSettingsTile.requestRefresh(appContext)
+                ChargeSpeedQuickSettingsTile.requestRefresh(appContext)
+                pendingResult.finish()
             }
-            FanQuickSettingsTile.requestRefresh(appContext)
-            OverlayTileService.requestRefresh(appContext)
-            ButtonLayoutQuickSettingsTile.requestRefresh(appContext)
-            ChargingQuickSettingsTile.requestRefresh(appContext)
-            pendingResult.finish()
         }
     }
 }

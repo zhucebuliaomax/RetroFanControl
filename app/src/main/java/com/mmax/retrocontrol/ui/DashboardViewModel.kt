@@ -814,6 +814,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         settings.put("thermalProtectionDisabled", state.thermalProtectionDisabled)
         settings.put("preserveBypassCharging", state.preserveBypassCharging)
         settings.put("chargingThreshold", ChargingControlPreferences.load(prefs).threshold)
+        settings.put(
+            "slowChargingEnabled",
+            prefs.getBoolean(Prefs.SLOW_CHARGING_ENABLED, false),
+        )
         settings.put("overlayX", prefs.getInt(Prefs.OVERLAY_X, Prefs.DEFAULT_OVERLAY_X))
         settings.put("overlayY", prefs.getInt(Prefs.OVERLAY_Y, Prefs.DEFAULT_OVERLAY_Y))
 
@@ -1053,6 +1057,11 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             settings.copyBoolean(
                 "preserveBypassCharging",
                 Prefs.PRESERVE_BYPASS_CHARGING,
+                this,
+            )
+            settings.copyBoolean(
+                "slowChargingEnabled",
+                Prefs.SLOW_CHARGING_ENABLED,
                 this,
             )
             if (settings.has("chargingThreshold")) {

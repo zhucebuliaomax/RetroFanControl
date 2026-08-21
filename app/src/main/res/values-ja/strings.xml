@@ -72,6 +72,14 @@
     <string name="tile_performance_label">周波数プロファイル</string>
     <string name="tile_button_layout_label">ボタンレイアウト</string>
     <string name="tile_charging_label">バイパス給電</string>
+    <string name="tile_charge_speed_label">充電速度</string>
+    <string name="charge_speed_rapid">急速充電</string>
+    <string name="charge_speed_slow">低速充電 · 約10 W</string>
+    <string name="charge_speed_not_charging">充電していません</string>
+    <string name="charge_speed_rapid_toast">急速充電を有効にしました</string>
+    <string name="charge_speed_slow_toast">低速充電を有効にしました</string>
+    <string name="charge_speed_root_required">Root 権限が必要です</string>
+    <string name="charge_speed_apply_failed">充電速度を変更できません</string>
     <string name="charging_not_connected">外部電源に接続されていません</string>
     <string name="charging_not_connected_short">未接続</string>
     <string name="charging_mode_normal">通常充電</string>

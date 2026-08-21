@@ -41,11 +41,12 @@ When the detected package changes, the service resolves and potentially reapplie
 
 | Work | Current cadence | Screen-off behavior | Root/sysfs cost |
 |---|---:|---|---|
-| Main fan/control loop | 300 ms | Continues | One fan write per tick |
-| CPU/GPU/DDR/battery/USB thermal read | 500 ms | Continues | Opens every cached sensor `temp` file |
-| Current CPU-frequency telemetry | 500 ms | Continues | One root-shell batch reading every CPU `scaling_cur_freq` |
-| Foreground-package detection | 1 s | Continues | One full activity dumpsys; sometimes a second window dumpsys |
-| Foreground notification update | 2 s | Continues | NotificationManager update |
+| Main fan/control loop | 300 ms while active | Cancelled after 5 s if unplugged; charging USB remains active | Changed output only |
+| Application thermal read | 500 ms overlay / 1 s normal / 3 s cool recheck | Stops after 5 s | Opens selected cached sensor `temp` files |
+| USB thermal read | 2 s interactive fallback | 1 s while charging; stopped if unplugged | Opens selected USB sensor `temp` file |
+| Current CPU-frequency telemetry | 500 ms | Stops after 5 s | One root-shell batch reading every CPU `scaling_cur_freq` |
+| Foreground-package detection | 1 s | Stops after 5 s | One full activity dumpsys; sometimes a second window dumpsys |
+| Foreground notification update | Event driven | Event driven | NotificationManager update on resolved-state changes |
 | Joystick RGB effects | Mode dependent | Stopped immediately | See the joystick document |
 | Charging threshold | Event driven | Continues on battery events | Conditional sysfs read/write/verification |
 
@@ -53,7 +54,12 @@ The process does not explicitly acquire a wake lock. Android deep suspend can th
 
 ## Screen state
 
-On `SCREEN_OFF`, joystick RGB animation is stopped immediately. The application fan output is suspended after a five-second delay, but the main loop itself is not suspended. USB thermal output is not suspended, which is required for screen-off charging safety.
+On `SCREEN_OFF`, joystick RGB animation and the telemetry overlay stop
+immediately; the overlay preference is cleared and its Quick Settings tile is
+refreshed. After five seconds the application fan and foreground-app monitor are
+suspended. Without external power, the fan loop and all periodic sampling stop
+after a verified PWM and `cur_state` zero. During charging, USB thermal control
+continues at one sample per second while presentation sampling remains stopped.
 
 On `USER_PRESENT`, application fan control and joystick behavior resume. The current implementation waits for unlock rather than merely screen-on.
 
@@ -73,7 +79,11 @@ The overlay consumes thermal, fan, and CPU-frequency telemetry. It provides fan 
 
 Charging threshold control is event driven. It reads sticky `ACTION_BATTERY_CHANGED` state and writes `/sys/class/qcom-battery/charging_enabled` only when necessary, then verifies the value.
 
-USB thermal fan control is currently embedded in the same 300 ms loop as the application CPU/GPU fan curve. Its temperature is sampled with all other sensors every 500 ms, regardless of charging state. USB thermal must remain available with the screen off because screen-off charging is its primary safety use case. It does not need the same latency as interactive CPU/GPU fan control and should become an independent charging-gated sampler.
+USB thermal fan control shares the fan coroutine but reads only the selected USB
+sensor. It is eligible only while external power is connected. Interactive USB
+fallback uses a two-second cadence; screen-off charging uses one second. An
+unplugged, settled screen-off state cancels the coroutine completely, while a
+power-connect event restarts it with an immediate USB sample.
 
 ## RP6 device observations
 

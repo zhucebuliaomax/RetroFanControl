@@ -33,6 +33,7 @@ import com.mmax.retrocontrol.hardware.ThermalSensorReader
 import com.mmax.retrocontrol.ui.uniqueImportedName
 import com.mmax.retrocontrol.ui.retainedPreferencesOnReset
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -604,6 +605,37 @@ class RetroControlTest {
             overlayVisible = false,
             belowApplicationStart = false,
         ))
+    }
+
+    @Test
+    fun fanRuntime_screenOffChargingSamplesUsbAtInteractiveCadence() {
+        assertEquals(
+            1_000L,
+            FanRuntimePolicy.sampleIntervalMs(
+                ActiveFanSource.USB,
+                overlayVisible = false,
+                belowApplicationStart = false,
+                screenOffSettled = true,
+            ),
+        )
+        assertEquals(
+            2_000L,
+            FanRuntimePolicy.sampleIntervalMs(
+                ActiveFanSource.USB,
+                overlayVisible = false,
+                belowApplicationStart = false,
+                screenOffSettled = false,
+            ),
+        )
+    }
+
+    @Test
+    fun fanRuntime_onlyFullySuspendsScreenOffWithoutExternalPower() {
+        assertTrue(FanRuntimePolicy.shouldSuspendAllSampling(true, false))
+        assertFalse(FanRuntimePolicy.shouldSuspendAllSampling(true, true))
+        assertFalse(FanRuntimePolicy.shouldSuspendAllSampling(false, false))
+        assertFalse(FanRuntimePolicy.shouldSamplePresentation(true))
+        assertTrue(FanRuntimePolicy.shouldSamplePresentation(false))
     }
 
     @Test

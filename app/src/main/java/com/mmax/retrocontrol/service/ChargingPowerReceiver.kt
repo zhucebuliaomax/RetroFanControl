@@ -6,9 +6,12 @@ import android.content.Intent
 import android.util.Log
 import com.mmax.retrocontrol.RootAccessManager
 import com.mmax.retrocontrol.data.ChargingControlPreferences
+import com.mmax.retrocontrol.data.ChargeSpeedPreferences
 import com.mmax.retrocontrol.data.Prefs
 import com.mmax.retrocontrol.hardware.BatteryConnectionReader
+import com.mmax.retrocontrol.hardware.ChargeSpeedController
 import com.mmax.retrocontrol.tile.ChargingQuickSettingsTile
+import com.mmax.retrocontrol.tile.ChargeSpeedQuickSettingsTile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,6 +34,7 @@ class ChargingPowerReceiver : BroadcastReceiver() {
             ChargingControlPreferences.resetSession(prefs)
         }
         ChargingQuickSettingsTile.requestRefresh(appContext)
+        ChargeSpeedQuickSettingsTile.requestRefresh(appContext)
 
         val pendingResult = goAsync()
         RootAccessManager.ensureRoot { granted ->
@@ -40,6 +44,11 @@ class ChargingPowerReceiver : BroadcastReceiver() {
                 return@ensureRoot
             }
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                if (connected) {
+                    ChargeSpeedController.setSlowChargingEnabled(
+                        ChargeSpeedPreferences.isSlowChargingEnabled(prefs),
+                    ).onFailure { Log.e(TAG, "Unable to restore charging speed", it) }
+                }
                 val broadcastState = BatteryConnectionReader.read(appContext).copy(
                     powerConnected = connected,
                 )
@@ -49,6 +58,7 @@ class ChargingPowerReceiver : BroadcastReceiver() {
                         .onFailure { Log.e(TAG, "Unable to start charging control", it) }
                 }
                 ChargingQuickSettingsTile.requestRefresh(appContext)
+                ChargeSpeedQuickSettingsTile.requestRefresh(appContext)
                 pendingResult.finish()
             }
         }

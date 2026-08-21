@@ -72,6 +72,14 @@
     <string name="tile_performance_label">频率方案</string>
     <string name="tile_button_layout_label">按键布局</string>
     <string name="tile_charging_label">旁路供电</string>
+    <string name="tile_charge_speed_label">充电速度</string>
+    <string name="charge_speed_rapid">快充</string>
+    <string name="charge_speed_slow">慢充 · 约 10 W</string>
+    <string name="charge_speed_not_charging">未充电</string>
+    <string name="charge_speed_rapid_toast">已启用快充</string>
+    <string name="charge_speed_slow_toast">已启用慢充</string>
+    <string name="charge_speed_root_required">需要 Root 权限</string>
+    <string name="charge_speed_apply_failed">无法切换充电速度</string>
     <string name="charging_not_connected">当前未在充电</string>
     <string name="charging_not_connected_short">未连接电源</string>
     <string name="charging_mode_normal">正常充电</string>

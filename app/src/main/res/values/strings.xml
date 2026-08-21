@@ -73,6 +73,14 @@
     <string name="tile_performance_label">Freq profile</string>
     <string name="tile_button_layout_label">Button layout</string>
     <string name="tile_charging_label">Bypass charging</string>
+    <string name="tile_charge_speed_label">Charging speed</string>
+    <string name="charge_speed_rapid">Rapid charge</string>
+    <string name="charge_speed_slow">Slow charge · ≈10 W</string>
+    <string name="charge_speed_not_charging">Not charging</string>
+    <string name="charge_speed_rapid_toast">Rapid charging enabled</string>
+    <string name="charge_speed_slow_toast">Slow charging enabled</string>
+    <string name="charge_speed_root_required">Root access is required</string>
+    <string name="charge_speed_apply_failed">Unable to change charging speed</string>
     <string name="charging_not_connected">External power is not connected</string>
     <string name="charging_not_connected_short">Not connected</string>
     <string name="charging_mode_normal">Normal charging</string>

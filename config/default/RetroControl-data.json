@@ -62,6 +62,7 @@
     "thermalProtectionDisabled": false,
     "preserveBypassCharging": false,
     "chargingThreshold": 80,
+    "slowChargingEnabled": false,
     "overlayX": 114,
     "overlayY": 81
   }

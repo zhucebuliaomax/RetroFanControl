@@ -2,10 +2,12 @@
 
 ## Ownership model
 
-RetroControl combines two independent curve inputs and writes the higher requested output:
+RetroControl has two curve inputs and selects exactly one eligible source:
 
-1. The active application fan curve, driven by CPU/GPU temperature.
-2. The USB thermal curve, driven by USB temperature.
+1. The active application fan curve, driven by CPU/GPU temperature, has priority
+   while the device is interactive.
+2. The USB thermal curve, driven by USB temperature, is selected only when the
+   application curve cannot run and external power is connected.
 
 `KernelFanThermalController` discovers CPU, GPU, and USB thermal trips whose cooling device type is `pwm-fan`. It stores original trip temperatures, temporarily disables each affected zone, raises the fan-bound trips to 125°C, and restores the intended zone mode. CPU/GPU zones normally remain enabled so unrelated throttling and protection continue to work; USB zones are disabled because RetroControl owns their fan policy. A user option can disable broader CPU/GPU thermal protection, but that is separate from fan ownership.
 
@@ -22,7 +24,12 @@ The application curve uses the hotter of:
 
 It does not use the hottest individual sensor. The USB curve uses the first classified USB reading. On the verified device this ordering makes `usb-therm` the likely USB control input, while a second `usb` zone also exists.
 
-Current temperature sampling interval: **500 ms**, in both screen-on and screen-off states and whether or not charging is connected.
+Current application temperature sampling interval is **1 second** during ordinary
+interactive use, **500 ms** while the telemetry overlay is visible, and **3
+seconds** for the safe below-curve recheck. USB thermal sampling is **2 seconds**
+while it is the selected interactive fallback and **1 second** during screen-off
+charging. Five seconds after screen-off, no thermal sensor is sampled if external
+power is disconnected.
 
 ## Curve and response algorithm
 
@@ -36,11 +43,16 @@ The application and USB paths each have their own `FanResponseController` with:
 - A 5-second linear output ramp.
 - Immediate reset when the selected configuration changes.
 
-The controller is evaluated by the 300 ms main loop. Reducing the outer loop must preserve the time-based semantics above. The filter is based on elapsed time, not a fixed number of samples, so a moderate reduction in sample rate is compatible, but too few samples would weaken median rejection and make ramp steps visible.
+The controller is evaluated by the 300 ms main loop while fan control is active.
+Ramp output is reevaluated every 500 ms normally or 300 ms while the overlay is
+visible. The filter is based on elapsed time, not a fixed number of samples.
 
 ## Output path and write rate
 
-Every 300 ms the service computes `max(applicationOutput, usbOutput)` and calls `FanController.writePercent`, including when the value is unchanged or is zero.
+The service selects one eligible source: the application curve has priority while
+interactive; USB thermal takes over when the application curve is suspended or
+unavailable and external power is connected. `FanController.writePercent` caches
+the last verified physical output and skips unchanged writes.
 
 Preferred output discovery searches root-visible hwmon devices for names matching a PWM fan and writes:
 
@@ -54,19 +66,36 @@ The 0–100% output is converted to `0..255`. If no PWM node is found or the wri
 /sys/class/thermal/cooling_device*/cur_state
 ```
 
-Each write is issued through a libsu command. Current maximum write rate is approximately **3.33 root-shell writes per second**, or **12,000 writes per hour**, even for a stable target.
+Each changed output is issued through a libsu command and verified by readback.
 
 ## Screen-off behavior
 
-Five seconds after `SCREEN_OFF`, the application curve is forced to zero. The USB curve remains active. The loop, all thermal reads, CPU-frequency telemetry, notification updates, and fan writes continue. Consequently a non-charging, screen-off device still repeatedly writes fan-off state.
+`SCREEN_OFF` immediately disables the telemetry overlay, persists its disabled
+setting, and refreshes the overlay Quick Settings tile. After a five-second grace
+period, foreground-app polling and presentation telemetry stop.
+
+If external power is disconnected, the fan loop is cancelled and awaited before
+the service performs a one-shot verified shutdown: physical PWM is written to zero
+and the `pwm-fan` cooling device `cur_state` is written and read back as zero. CPU,
+GPU, USB, CPU-frequency, joystick-thermal, and foreground-app sampling are then
+dormant, leaving only event receivers able to wake the service.
+
+If external power is connected, the application curve remains suspended and USB
+thermal control continues at the normal one-second interactive sampling cadence.
+CPU-frequency and foreground-app sampling remain stopped. Connecting power while
+already suspended starts an immediate USB sample; disconnecting power cancels the
+fan loop and performs the verified zero-output shutdown. Unlock restores the
+interactive samplers.
 
 ## Current idle cases
 
-- Application curve disabled, USB disabled: still samples and writes 0 every 300 ms.
-- Application temperature below its first working point: still samples and writes 0 every 300 ms.
-- Screen off and not charging: still samples and writes 0 every 300 ms.
-- Stable nonzero output: still rewrites the same PWM every 300 ms.
-- USB enabled but not charging: USB temperature is still sampled and participates in the loop.
+- Application curve disabled and USB ineligible: no thermal samples; zero is
+  written only when entering the unmanaged state.
+- Application temperature safely below its first working point: rechecked every
+  3 seconds.
+- Screen off and not charging: all periodic sampling stops after five seconds.
+- Stable nonzero output: unchanged physical writes are skipped.
+- USB enabled but not charging: USB temperature is not sampled.
 
 ## Safety constraints for optimization
 
